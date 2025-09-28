@@ -57,12 +57,28 @@ const Orders = () => {
     }
   }
 
-  // Fetch all orders (admin view)
+  // Fetch all orders (admin/sales view)
   const fetchOrders = async () => {
     try {
       setLoading(true)
-      // Since we don't have a "get all orders" endpoint, we'll use a mock approach
-      // In a real scenario, you'd have GET /api/orders endpoint
+      const response = await orderApi.get('/api/orders', {
+        params: {
+          page: 1,
+          limit: 100,
+          status: statusFilter !== 'all' ? statusFilter : undefined,
+          username: searchTerm || undefined
+        }
+      })
+
+      if (response.data.success) {
+        setOrders(response.data.data || [])
+      } else {
+        showError('Failed to fetch orders: ' + response.data.message)
+        setOrders([])
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error)
+      // Fallback to mock data if API fails
       const mockOrders = [
         {
           id: '1',
@@ -104,9 +120,7 @@ const Orders = () => {
         }
       ]
       setOrders(mockOrders)
-    } catch (error) {
-      console.error('Error fetching orders:', error)
-      showError(formatErrorMessage(error))
+      showInfo('Using demo data - API connection failed')
     } finally {
       setLoading(false)
     }

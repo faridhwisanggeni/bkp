@@ -122,6 +122,55 @@ class OrderModel {
     return result.rows
   }
   
+  // Get all orders with pagination and filters
+  static async getAllOrders(options = {}) {
+    const { page = 1, limit = 10, status, username } = options
+    const offset = (page - 1) * limit
+    
+    let whereClause = ''
+    const queryParams = []
+    let paramIndex = 1
+    
+    if (status) {
+      whereClause += `WHERE oh.order_status = $${paramIndex}`
+      queryParams.push(status)
+      paramIndex++
+    }
+    
+    if (username) {
+      whereClause += whereClause ? ` AND oh.username ILIKE $${paramIndex}` : `WHERE oh.username ILIKE $${paramIndex}`
+      queryParams.push(`%${username}%`)
+      paramIndex++
+    }
+    
+    const query = `
+      SELECT 
+        oh.*,
+        json_agg(
+          json_build_object(
+            'id', od.id,
+            'id_product', od.id_product,
+            'qty', od.qty,
+            'original_price', od.original_price,
+            'id_promo', od.id_promo,
+            'deduct_price', od.deduct_price,
+            'total_price', od.total_price
+          )
+        ) as order_details
+      FROM order_header oh
+      LEFT JOIN order_detail od ON oh.id = od.id_order_header
+      ${whereClause}
+      GROUP BY oh.id, oh.order_id, oh.username, oh.order_date, oh.order_status, oh.total_harga
+      ORDER BY oh.order_date DESC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+    `
+    
+    queryParams.push(limit, offset)
+    
+    const result = await pool.query(query, queryParams)
+    return result.rows
+  }
+
   // Update order status
   static async updateOrderStatus(orderId, status) {
     const query = `

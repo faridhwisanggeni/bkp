@@ -145,6 +145,33 @@ class OrderController {
       })
     }
   }
+
+  // Get all orders (for admin/sales)
+  static async getAllOrders(req, res) {
+    try {
+      const { page = 1, limit = 10, status, username } = req.query
+      
+      const orders = await OrderModel.getAllOrders({
+        page: parseInt(page),
+        limit: parseInt(limit),
+        status,
+        username
+      })
+      
+      res.json({
+        success: true,
+        data: orders
+      })
+      
+    } catch (error) {
+      console.error('Error getting all orders:', error)
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      })
+    }
+  }
   
   // Update order status
   static async updateOrderStatus(req, res) {

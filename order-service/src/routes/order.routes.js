@@ -6,6 +6,9 @@ const router = express.Router()
 // Create new order
 router.post('/orders', OrderController.createOrder)
 
+// Get all orders (for admin/sales)
+router.get('/orders', OrderController.getAllOrders)
+
 // Get order by order_id
 router.get('/orders/:orderId', OrderController.getOrderByOrderId)
 

@@ -35,7 +35,8 @@ const SimpleLayout = () => {
       case 'sales':
         return [
           { name: 'Products', icon: Package, path: '/products' },
-          { name: 'Promotions', icon: Tag, path: '/promotions' }
+          { name: 'Promotions', icon: Tag, path: '/promotions' },
+          { name: 'Orders', icon: ShoppingBag, path: '/orders' }
         ]
       default:
         return []

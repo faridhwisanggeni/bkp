@@ -121,7 +121,7 @@ createRoot(document.getElementById('root')).render(
         <Route
           path="/orders"
           element={
-            <ProtectedRoute requireRole="admin">
+            <ProtectedRoute requireRole={["admin", "sales"]}>
               <App />
             </ProtectedRoute>
           }

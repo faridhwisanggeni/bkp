@@ -10,16 +10,19 @@ export default function ProtectedRoute({ children, requireRole }) {
   if (!token) return <Navigate to="/" replace />
   
   // If specific role required and user doesn't have it, redirect based on their role
-  if (requireRole && role !== requireRole) {
-    switch (role) {
-      case 'admin':
-        return <Navigate to="/admin" replace />
-      case 'sales':
-        return <Navigate to="/products" replace />
-      case 'customer':
-        return <Navigate to="/" replace />
-      default:
-        return <Navigate to="/" replace />
+  if (requireRole) {
+    const allowedRoles = Array.isArray(requireRole) ? requireRole : [requireRole]
+    if (!allowedRoles.includes(role)) {
+      switch (role) {
+        case 'admin':
+          return <Navigate to="/admin" replace />
+        case 'sales':
+          return <Navigate to="/products" replace />
+        case 'customer':
+          return <Navigate to="/" replace />
+        default:
+          return <Navigate to="/" replace />
+      }
     }
   }
   
