@@ -121,9 +121,28 @@ class StockConsumer {
       if (!stockValidation.is_stock_valid) {
         // Stock not available - cancel order
         const updatedOrder = await OrderModel.updateOrderStatus(orderId, 'cancelled')
-        console.log(`❌ Order ${orderId} cancelled: Insufficient stock`)
         
-        // Publish cancellation event
+        // Generate detailed error message
+        const stockIssues = []
+        for (const detail of stockValidation.validation_details) {
+          if (!detail.is_valid) {
+            if (detail.reason === 'Product not found') {
+              stockIssues.push(`Product ID ${detail.id_product} is not available`)
+            } else if (detail.reason === 'Product is not active') {
+              stockIssues.push(`${detail.product_name} is currently unavailable`)
+            } else if (detail.reason === 'Insufficient stock') {
+              stockIssues.push(`${detail.product_name} is out of stock (requested: ${detail.requested_qty}, available: ${detail.available_stock})`)
+            }
+          }
+        }
+        
+        const errorMessage = stockIssues.length > 0 
+          ? `Order cannot be processed: ${stockIssues.join(', ')}`
+          : 'Order cannot be processed due to stock unavailability or the items have been purchased by other customers'
+        
+        console.log(`❌ Order ${orderId} cancelled: ${errorMessage}`)
+        
+        // Publish cancellation event with detailed message
         if (updatedOrder) {
           await rabbitmqService.publishOrderEvent('cancelled', {
             order_id: updatedOrder.order_id,
@@ -131,7 +150,8 @@ class StockConsumer {
             order_status: updatedOrder.order_status,
             total_harga: updatedOrder.total_harga,
             updated_at: updatedOrder.updated_at,
-            reason: 'Insufficient stock'
+            reason: errorMessage,
+            stock_validation_details: stockValidation.validation_details
           })
         }
       } else {
@@ -209,6 +229,16 @@ class StockConsumer {
         console.log('✅ All promo items within daily limits, proceeding to payment')
         await this.proceedToPayment(orderId)
       } else {
+        // Generate detailed promo limit error message
+        const promoIssues = []
+        for (const detail of promoValidationDetails) {
+          if (!detail.is_within_limit) {
+            promoIssues.push(`Promo item limit exceeded (requested: ${detail.requested_qty}, daily limit: ${detail.max_promo_qty}, already used: ${detail.current_daily_usage})`)
+          }
+        }
+        
+        const errorMessage = `Order cannot be processed: You have exceeded the daily promotional item limits. ${promoIssues.join(', ')}`
+        
         console.log('❌ Some promo items exceed daily limits, cancelling order')
         const updatedOrder = await OrderModel.updateOrderStatus(orderId, 'cancelled')
         
@@ -219,7 +249,7 @@ class StockConsumer {
             order_status: updatedOrder.order_status,
             total_harga: updatedOrder.total_harga,
             updated_at: updatedOrder.updated_at,
-            reason: 'Exceeded daily promo limits',
+            reason: errorMessage,
             promo_validation_details: promoValidationDetails
           })
         }

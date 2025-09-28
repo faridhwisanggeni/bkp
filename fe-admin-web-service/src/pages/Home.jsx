@@ -211,9 +211,27 @@ const Home = () => {
       const response = await orderApi.post('/api/orders', orderData)
       
       if (response.data.success) {
-        showSuccess(`Order created successfully! Order ID: ${response.data.data.order_id}`)
+        const orderId = response.data.data.order_id
+        showSuccess(`Order created successfully! Order ID: ${orderId.slice(-8)}`)
         setCart([]) // Clear cart
         setShowCart(false)
+        
+        // Check order status after a delay to see if it gets cancelled
+        setTimeout(async () => {
+          try {
+            const statusResponse = await orderApi.get(`/api/orders/${orderId}`)
+            if (statusResponse.data.success) {
+              const order = statusResponse.data.data
+              if (order.order_status === 'cancelled') {
+                showError(order.cancellation_reason || 'Order was cancelled due to stock unavailability or promotional limits exceeded')
+              } else if (order.order_status === 'ready_for_payment') {
+                showSuccess('Order validated successfully! You can now proceed to payment in My Orders.')
+              }
+            }
+          } catch (statusError) {
+            console.error('Error checking order status:', statusError)
+          }
+        }, 3000) // Check after 3 seconds
       } else {
         showError('Failed to create order: ' + response.data.message)
       }

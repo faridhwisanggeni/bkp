@@ -82,13 +82,6 @@ class OrderController {
     try {
       const { orderId } = req.params
       
-      if (!orderId) {
-        return res.status(400).json({
-          success: false,
-          message: 'Order ID is required'
-        })
-      }
-      
       const order = await OrderModel.getOrderByOrderId(orderId)
       
       if (!order) {
@@ -98,13 +91,24 @@ class OrderController {
         })
       }
       
+      // Add cancellation reason if order is cancelled
+      let cancellationReason = null
+      if (order.order_status === 'cancelled') {
+        // In a real implementation, you'd store the cancellation reason in the database
+        // For now, we'll provide a generic message
+        cancellationReason = 'Order was cancelled due to stock unavailability or promotional limits exceeded'
+      }
+      
       res.json({
         success: true,
-        data: order
+        data: {
+          ...order,
+          cancellation_reason: cancellationReason
+        }
       })
       
     } catch (error) {
-      console.error('Error getting order:', error)
+      console.error('Error fetching order:', error)
       res.status(500).json({
         success: false,
         message: 'Internal server error',

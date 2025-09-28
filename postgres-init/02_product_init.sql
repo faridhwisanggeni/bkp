@@ -1,9 +1,24 @@
--- Product database schema and data
--- This runs after user database
+-- Product Service Database Initialization
+-- This file runs ONLY in db-product container
 
+-- Create database if not exists
+SELECT 'CREATE DATABASE "db-product"' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'db-product')\gexec
+
+-- Create user for product-service if not exists
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_user WHERE usename = 'product-service-db') THEN
+        CREATE USER "product-service-db" WITH ENCRYPTED PASSWORD 'product@!4';
+    END IF;
+END $$;
+
+-- Grant privileges
+GRANT ALL PRIVILEGES ON DATABASE "db-product" TO "product-service-db";
+
+-- Connect to the product database
 \c "db-product";
 
--- Products table
+-- Create products table
 CREATE TABLE IF NOT EXISTS products (
   id SERIAL PRIMARY KEY,
   product_name VARCHAR(200) NOT NULL,
@@ -17,7 +32,7 @@ CREATE TABLE IF NOT EXISTS products (
   updated_by VARCHAR(100)
 );
 
--- Promotions table
+-- Create promotions table
 CREATE TABLE IF NOT EXISTS promotions (
   id SERIAL PRIMARY KEY,
   product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
@@ -37,7 +52,7 @@ CREATE TABLE IF NOT EXISTS promotions (
   CONSTRAINT check_discount_range CHECK (discount >= 0)
 );
 
--- Indexes for performance
+-- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_products_is_active ON products(is_active);
 CREATE INDEX IF NOT EXISTS idx_products_product_name ON products(product_name);
 CREATE INDEX IF NOT EXISTS idx_products_deleted_at ON products(deleted_at);
@@ -46,17 +61,24 @@ CREATE INDEX IF NOT EXISTS idx_promotions_is_active ON promotions(is_active);
 CREATE INDEX IF NOT EXISTS idx_promotions_dates ON promotions(started_at, ended_at);
 CREATE INDEX IF NOT EXISTS idx_promotions_deleted_at ON promotions(deleted_at);
 
--- Seed products
+-- Insert sample products
 INSERT INTO products (product_name, price, qty, is_active, created_by)
 VALUES 
-  ('Laptop Gaming ROG', 1299.99, 25, TRUE, 'seed'),
-  ('iPhone 15 Pro', 999.99, 12, TRUE, 'seed')
+  ('Laptop Gaming ROG', 1299.99, 25, TRUE, 'system'),
+  ('iPhone 15 Pro', 999.99, 12, TRUE, 'system'),
+  ('Samsung Galaxy S24', 899.99, 15, TRUE, 'system'),
+  ('MacBook Pro M3', 1999.99, 8, TRUE, 'system')
 ON CONFLICT DO NOTHING;
 
--- Seed promotions
+-- Insert sample promotions
 INSERT INTO promotions (product_id, promotion_name, promotion_type, discount, qty_max, is_active, started_at, ended_at, created_by)
 VALUES 
-  (1, 'Flash Sale Weekend - Laptop Gaming', 'discount', 15, 2, TRUE, '2024-01-20 00:00:00+07', '2024-01-22 23:59:59+07', 'seed')
+  (1, 'Flash Sale Weekend - Laptop Gaming', 'discount', 15, 2, TRUE, '2024-01-20 00:00:00+07', '2024-12-31 23:59:59+07', 'system'),
+  (2, 'iPhone Holiday Special', 'discount', 10, 1, TRUE, '2024-01-20 00:00:00+07', '2024-12-31 23:59:59+07', 'system')
 ON CONFLICT DO NOTHING;
 
-SELECT 'Product database schema and data created successfully!' as message;
+-- Grant permissions to product-service-db user
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "product-service-db";
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO "product-service-db";
+
+SELECT 'Product database initialized successfully!' as message;

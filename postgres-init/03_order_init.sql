@@ -1,7 +1,6 @@
--- Order database schema
--- This runs after product database
-
-\c order_db;
+-- Order Service Database Initialization
+-- This file runs ONLY in db-order container
+-- Note: db-order container already creates order_db as default database
 
 -- Create order_header table
 CREATE TABLE IF NOT EXISTS order_header (
@@ -67,8 +66,8 @@ FROM order_header oh
 LEFT JOIN order_detail od ON oh.id = od.id_order_header
 GROUP BY oh.id, oh.order_id, oh.username, oh.order_date, oh.order_status, oh.total_harga;
 
--- Grant permissions to postgres user
+-- Grant permissions to postgres user (default user for db-order container)
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO postgres;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO postgres;
 
-SELECT 'Order database schema created successfully!' as message;
+SELECT 'Order database initialized successfully!' as message;
