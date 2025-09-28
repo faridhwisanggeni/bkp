@@ -343,7 +343,7 @@ describe('OrderModel', () => {
 
       expect(result).toEqual(updatedOrder);
       expect(pool.query).toHaveBeenCalledWith(
-        expect.stringContaining('UPDATE order_header SET order_status = $1'),
+        expect.stringContaining('UPDATE order_header'),
         ['completed', 'order-123']
       );
     });

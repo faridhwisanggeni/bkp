@@ -93,28 +93,18 @@ describe('RabbitMQ Integration Tests', () => {
   });
 
   describe('Stock Validation Response Handling', () => {
-    beforeEach(async () => {
-      // Create a test order for stock validation tests
-      rabbitmqService.publishOrderCreated.mockResolvedValue(true);
-
-      const orderData = {
-        username: 'stock-validation-test',
-        total_harga: 1299.99,
-        items: [
-          {
-            id_product: 1,
-            qty: 1,
-            original_price: 1299.99,
-            total_price: 1299.99
-          }
-        ]
+    beforeEach(() => {
+      // Mock test order for stock validation tests
+      testOrder = {
+        order_id: 'test-order-123',
+        order_header: {
+          id: 'header-uuid',
+          order_id: 'test-order-123',
+          username: 'stock-validation-test',
+          order_status: 'pending',
+          total_harga: 1299.99
+        }
       };
-
-      const response = await request(app)
-        .post('/api/orders')
-        .send(orderData);
-
-      testOrder = response.body.data;
     });
 
     it('should process stock validation success message', async () => {

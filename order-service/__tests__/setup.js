@@ -103,3 +103,10 @@ beforeEach(() => {
 afterEach(() => {
   // Cleanup after each test if needed
 });
+
+// Dummy test to prevent "no tests" error
+describe('Setup', () => {
+  it('should configure test environment', () => {
+    expect(process.env.NODE_ENV).toBe('test');
+  });
+});

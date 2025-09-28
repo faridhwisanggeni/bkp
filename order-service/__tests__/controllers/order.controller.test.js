@@ -40,15 +40,15 @@ describe('OrderController', () => {
 
       const createdOrder = {
         order_id: 'uuid-123',
-        orderHeader: {
+        order_header: {
           id: 'header-uuid',
           order_id: 'uuid-123',
           username: 'testuser',
           order_status: 'pending',
           total_harga: 999.99,
-          order_date: new Date()
+          order_date: expect.any(String)
         },
-        orderDetails: [
+        order_details: [
           {
             id: 'detail-uuid',
             id_order_header: 'header-uuid',
@@ -60,7 +60,10 @@ describe('OrderController', () => {
         ]
       };
 
-      OrderModel.createOrder.mockResolvedValue(createdOrder);
+      OrderModel.createOrder.mockResolvedValue({
+        orderHeader: createdOrder.order_header,
+        orderDetails: createdOrder.order_details
+      });
       rabbitmqService.publishOrderCreated.mockResolvedValue(true);
 
       const response = await request(app)
@@ -276,7 +279,7 @@ describe('OrderController', () => {
       expect(OrderModel.getOrdersByUsername).toHaveBeenCalledWith('testuser');
     });
 
-    it('should return 400 for missing username', async () => {
+    it('should return 404 for missing username', async () => {
       const response = await request(app).get('/orders/user/');
 
       expect(response.status).toBe(404); // Route not found
