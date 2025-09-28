@@ -12,6 +12,14 @@ BEGIN
     END IF;
 END $$;
 
+-- Create postgres user if not exists (for compatibility)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_user WHERE usename = 'postgres') THEN
+        CREATE USER "postgres" WITH ENCRYPTED PASSWORD 'postgres' SUPERUSER;
+    END IF;
+END $$;
+
 -- Grant privileges
 GRANT ALL PRIVILEGES ON DATABASE "db-product" TO "product-service-db";
 
