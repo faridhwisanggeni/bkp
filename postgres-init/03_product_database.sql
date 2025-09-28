@@ -1,4 +1,7 @@
--- Schema and seed for product-service
+-- Product database schema and data
+-- This runs after user database
+
+\c "db-product";
 
 -- Products table
 CREATE TABLE IF NOT EXISTS products (
@@ -55,3 +58,5 @@ INSERT INTO promotions (product_id, promotion_name, promotion_type, discount, qt
 VALUES 
   (1, 'Flash Sale Weekend - Laptop Gaming', 'discount', 15, 2, TRUE, '2024-01-20 00:00:00+07', '2024-01-22 23:59:59+07', 'seed')
 ON CONFLICT DO NOTHING;
+
+SELECT 'Product database schema and data created successfully!' as message;

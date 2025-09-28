@@ -1,4 +1,7 @@
--- Schema and seed for order-service
+-- Order database schema
+-- This runs after product database
+
+\c order_db;
 
 -- Create order_header table
 CREATE TABLE IF NOT EXISTS order_header (
@@ -68,5 +71,4 @@ GROUP BY oh.id, oh.order_id, oh.username, oh.order_date, oh.order_status, oh.tot
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO postgres;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO postgres;
 
--- Display success message
-SELECT 'Order service schema created successfully!' as message;
+SELECT 'Order database schema created successfully!' as message;

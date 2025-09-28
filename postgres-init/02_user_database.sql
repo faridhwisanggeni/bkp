@@ -1,4 +1,7 @@
--- Schema and seed for user-service
+-- User database schema and data
+-- This runs after 01_init.sql
+
+\c "db-user";
 
 -- Roles table
 CREATE TABLE IF NOT EXISTS roles (
@@ -33,15 +36,6 @@ VALUES
   ('sales', TRUE, 'init')
 ON CONFLICT (role_name) DO NOTHING;
 
--- Indexes for performance
-CREATE INDEX IF NOT EXISTS idx_users_role_id ON users(role_id);
-CREATE INDEX IF NOT EXISTS idx_users_is_active ON users(is_active);
-CREATE INDEX IF NOT EXISTS idx_roles_is_active ON roles(is_active);
-
--- Case-insensitive uniqueness to prevent duplicates that differ only by case
-CREATE UNIQUE INDEX IF NOT EXISTS uq_users_email_ci ON users (LOWER(email));
-CREATE UNIQUE INDEX IF NOT EXISTS uq_roles_role_name_ci ON roles (LOWER(role_name));
-
 -- Seed users
 -- Note: Passwords are hashed versions using bcrypt
 -- admin@example.com: ChangeMeAdmin123!
@@ -59,3 +53,14 @@ VALUES
    (SELECT id FROM roles WHERE role_name = 'customer'), 
    TRUE, '$2b$10$vI8aWY8I3fNVmGOqMQjKQeEjKJXllVCoqjB05Jcw/BPyT6shoFhye', 'init')
 ON CONFLICT (email) DO NOTHING;
+
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_users_role_id ON users(role_id);
+CREATE INDEX IF NOT EXISTS idx_users_is_active ON users(is_active);
+CREATE INDEX IF NOT EXISTS idx_roles_is_active ON roles(is_active);
+
+-- Case-insensitive uniqueness to prevent duplicates that differ only by case
+CREATE UNIQUE INDEX IF NOT EXISTS uq_users_email_ci ON users (LOWER(email));
+CREATE UNIQUE INDEX IF NOT EXISTS uq_roles_role_name_ci ON roles (LOWER(role_name));
+
+SELECT 'User database schema and data created successfully!' as message;
