@@ -273,32 +273,6 @@ curl -X POST http://localhost:3003/api/orders/{ORDER_ID}/complete-payment \
 - RabbitMQ connection status included in health checks
 - Comprehensive logging for debugging
 
-## Troubleshooting
-
-### Data Persistence Issue
-If you see old data after `make restart-full`, it means Docker volumes weren't properly removed:
-
-**Problem**: `make restart-full` should remove all data but old orders still appear
-**Solution**: 
-1. Run `make down` to ensure all volumes are removed
-2. Verify with `docker volume ls | grep -E "(bkp|user|product|order|rabbitmq)"`
-3. If volumes still exist, manually remove them:
-   ```bash
-   docker volume rm bkp_db_user_data bkp_db_product_data bkp_db_order_data bkp_rabbitmq_data
-   ```
-4. Then run `make up` to start fresh
-
-### Build Issues
-If Docker build fails with npm errors:
-1. Run `npm install` in each service directory first
-2. Then run `make up`
-
-### Container Not Starting
-If containers fail to start:
-1. Check logs: `docker compose logs [service-name]`
-2. Ensure all required ports are available
-3. Try `make clean` for deep cleanup
-
 ## Benefits
 
 1. **Decoupled Architecture** - Services communicate asynchronously

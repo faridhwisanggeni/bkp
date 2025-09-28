@@ -180,7 +180,7 @@ services:
       - "5434:5432"
     volumes:
       - db_order_data:/var/lib/postgresql/data
-      - ./order-init:/docker-entrypoint-initdb.d
+      - ./postgres-init:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d order_db -h localhost"]
       interval: 5s

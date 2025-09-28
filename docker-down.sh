@@ -22,6 +22,10 @@ echo "🧹 Cleaning up project resources..."
 # Remove all images related to this project
 echo "Removing project images..."
 docker rmi -f $(docker images -q --filter "reference=bkp*") 2>/dev/null || true
+docker rmi -f $(docker images -q --filter "reference=*user-service*") 2>/dev/null || true
+docker rmi -f $(docker images -q --filter "reference=*product-service*") 2>/dev/null || true
+docker rmi -f $(docker images -q --filter "reference=*order-service*") 2>/dev/null || true
+docker rmi -f $(docker images -q --filter "reference=*fe-admin-web-service*") 2>/dev/null || true
 
 # Remove all volumes for this project
 echo "Removing project volumes..."
