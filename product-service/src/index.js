@@ -1,6 +1,8 @@
 require('dotenv').config();
 const app = require('./app');
 const { pool } = require('./db/pool');
+const rabbitmqService = require('./services/rabbitmq.service');
+const OrderConsumer = require('./consumers/order.consumer');
 
 const PORT = process.env.PORT || 3002;
 
@@ -21,10 +23,19 @@ async function startServer() {
   try {
     await testConnection();
     
+    // Connect to RabbitMQ
+    await rabbitmqService.connect();
+    
+    // Start order consumers
+    const orderConsumer = new OrderConsumer();
+    await orderConsumer.startConsuming();
+    
     app.listen(PORT, () => {
       console.log(`🚀 Product Service running on port ${PORT}`);
       console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
+      console.log(`🐰 RabbitMQ Management UI: http://localhost:15672`);
+      console.log(`   Username: admin, Password: admin123`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
@@ -35,12 +46,14 @@ async function startServer() {
 // Graceful shutdown
 process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down gracefully');
+  await rabbitmqService.close();
   await pool.end();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   console.log('SIGINT received, shutting down gracefully');
+  await rabbitmqService.close();
   await pool.end();
   process.exit(0);
 });

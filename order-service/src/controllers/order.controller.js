@@ -149,11 +149,11 @@ class OrderController {
       const { status } = req.body
       
       // Validate status
-      const validStatuses = ['pending', 'processed', 'done']
+      const validStatuses = ['pending', 'ready_for_payment', 'completed', 'cancelled', 'failed']
       if (!validStatuses.includes(status)) {
         return res.status(400).json({
           success: false,
-          message: 'Invalid status. Must be one of: pending, processed, done'
+          message: 'Invalid status. Must be one of: pending, ready_for_payment, completed, cancelled, failed'
         })
       }
       
@@ -168,8 +168,8 @@ class OrderController {
       
       // Publish order updated event to RabbitMQ
       try {
-        const eventType = status === 'done' ? 'completed' : 'updated'
-        const publishMethod = status === 'done' ? 'publishOrderCompleted' : 'publishOrderUpdated'
+        const eventType = status === 'completed' ? 'completed' : 'updated'
+        const publishMethod = status === 'completed' ? 'publishOrderCompleted' : 'publishOrderUpdated'
         
         await rabbitmqService[publishMethod]({
           order_id: updatedOrder.order_id,
@@ -191,6 +191,94 @@ class OrderController {
       
     } catch (error) {
       console.error('Error updating order status:', error)
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      })
+    }
+  }
+
+  // Complete payment for order
+  static async completePayment(req, res) {
+    try {
+      const { orderId } = req.params
+      const { payment_method, card_number } = req.body
+      
+      // Validate payment data
+      if (!payment_method || !card_number) {
+        return res.status(400).json({
+          success: false,
+          message: 'Payment method and card number are required'
+        })
+      }
+      
+      // Get current order
+      const currentOrder = await OrderModel.getOrderByOrderId(orderId)
+      if (!currentOrder) {
+        return res.status(404).json({
+          success: false,
+          message: 'Order not found'
+        })
+      }
+      
+      // Check if order is ready for payment
+      if (currentOrder.order_status !== 'ready_for_payment') {
+        return res.status(400).json({
+          success: false,
+          message: `Order is not ready for payment. Current status: ${currentOrder.order_status}`
+        })
+      }
+      
+      // Simulate payment processing (always success for demo)
+      console.log(`💳 Processing payment for order ${orderId} with card ending in ${card_number.slice(-4)}`)
+      
+      // Update order status to completed
+      const updatedOrder = await OrderModel.updateOrderStatus(orderId, 'completed')
+      
+      if (!updatedOrder) {
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to update order status'
+        })
+      }
+      
+      // Publish order completed event to RabbitMQ (this will trigger stock reduction)
+      try {
+        await rabbitmqService.publishOrderCompleted({
+          order_id: updatedOrder.order_id,
+          username: updatedOrder.username,
+          order_status: updatedOrder.order_status,
+          total_harga: updatedOrder.total_harga,
+          updated_at: updatedOrder.updated_at,
+          items: currentOrder.order_details,
+          payment_info: {
+            payment_method,
+            card_last_four: card_number.slice(-4),
+            payment_date: new Date().toISOString()
+          }
+        })
+      } catch (mqError) {
+        console.error('Failed to publish order completed event:', mqError)
+        // Don't fail the request if RabbitMQ fails
+      }
+      
+      res.json({
+        success: true,
+        message: 'Payment completed successfully',
+        data: {
+          order_id: updatedOrder.order_id,
+          order_status: updatedOrder.order_status,
+          payment_info: {
+            payment_method,
+            card_last_four: card_number.slice(-4),
+            payment_date: new Date().toISOString()
+          }
+        }
+      })
+      
+    } catch (error) {
+      console.error('Error completing payment:', error)
       res.status(500).json({
         success: false,
         message: 'Internal server error',

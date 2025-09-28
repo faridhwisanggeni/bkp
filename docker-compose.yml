@@ -57,11 +57,18 @@ services:
       - BCRYPT_SALT_ROUNDS=10
       - CORS_ORIGIN=http://localhost:5173
       - LOG_LEVEL=info
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=admin
+      - RABBITMQ_PASSWORD=admin123
+      - RABBITMQ_VHOST=/
     restart: unless-stopped
     networks:
       - app-network
     depends_on:
       db-product:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
 
   order-service:
@@ -84,6 +91,11 @@ services:
       - DB_USER=postgres
       - DB_PASSWORD=postgres
       - CORS_ORIGIN=http://localhost:5173
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=admin
+      - RABBITMQ_PASSWORD=admin123
+      - RABBITMQ_VHOST=/
     restart: unless-stopped
     networks:
       - app-network

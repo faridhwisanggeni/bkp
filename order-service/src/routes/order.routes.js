@@ -15,4 +15,7 @@ router.get('/orders/user/:username', OrderController.getOrdersByUsername)
 // Update order status
 router.put('/orders/:orderId/status', OrderController.updateOrderStatus)
 
+// Complete payment for order
+router.post('/orders/:orderId/complete-payment', OrderController.completePayment)
+
 module.exports = router

@@ -8,6 +8,7 @@ const orderRoutes = require('./routes/order.routes')
 const errorHandler = require('./middleware/errorHandler')
 const rabbitmqService = require('./services/rabbitmq.service')
 const OrderConsumer = require('./consumers/order.consumer')
+const StockConsumer = require('./consumers/stock.consumer')
 
 const app = express()
 const PORT = process.env.PORT || 3003
@@ -62,6 +63,10 @@ async function startServer() {
     // Start order consumers
     const orderConsumer = new OrderConsumer()
     await orderConsumer.startConsuming()
+    
+    // Start stock validation consumers
+    const stockConsumer = new StockConsumer()
+    await stockConsumer.startConsuming()
     
     // Start HTTP server
     app.listen(PORT, () => {
