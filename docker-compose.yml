@@ -1,0 +1,210 @@
+services:
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+      no_cache: true
+    container_name: user-service
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./user-service:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - DB_HOST=db-user
+      - DB_PORT=5432
+      - DB_NAME=db-user
+      - DB_USER=user-service-db
+      - DB_PASSWORD=user@!4
+      - UV_THREADPOOL_SIZE=8
+      - JWT_ACCESS_SECRET=dev_access_secret_change_me
+      - JWT_REFRESH_SECRET=dev_refresh_secret_change_me
+      - JWT_ACCESS_EXPIRES=15m
+      - JWT_REFRESH_EXPIRES=7d
+      - REQUEST_TIMEOUT_MS=10000
+      - LOG_LEVEL=info
+    restart: unless-stopped
+    networks:
+      - app-network
+    depends_on:
+      db-user:
+        condition: service_healthy
+
+  product-service:
+    build:
+      context: ./product-service
+      dockerfile: Dockerfile
+      no_cache: true
+    container_name: product-service
+    ports:
+      - "3002:3002"
+    volumes:
+      - ./product-service:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=3002
+      - DB_HOST=db-product
+      - DB_PORT=5432
+      - DB_NAME=db-product
+      - DB_USER=product-service-db
+      - DB_PASSWORD=product-service-password
+      - JWT_SECRET=product-service-jwt-secret-key-2024
+      - JWT_EXPIRES_IN=24h
+      - JWT_REFRESH_EXPIRES_IN=7d
+      - BCRYPT_SALT_ROUNDS=10
+      - CORS_ORIGIN=http://localhost:5173
+      - LOG_LEVEL=info
+    restart: unless-stopped
+    networks:
+      - app-network
+    depends_on:
+      db-product:
+        condition: service_healthy
+
+  order-service:
+    build:
+      context: ./order-service
+      dockerfile: Dockerfile
+      no_cache: true
+    container_name: order-service
+    ports:
+      - "3003:3003"
+    volumes:
+      - ./order-service:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=3003
+      - DB_HOST=db-order
+      - DB_PORT=5432
+      - DB_NAME=order_db
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - CORS_ORIGIN=http://localhost:5173
+    restart: unless-stopped
+    networks:
+      - app-network
+    depends_on:
+      db-order:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  fe-admin-web-service:
+    build:
+      context: ./fe-admin-web-service
+      dockerfile: Dockerfile
+      no_cache: true
+    container_name: fe-admin-web-service
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:3000
+      - VITE_PRODUCT_API_BASE_URL=http://localhost:3002
+      - VITE_ORDER_API_BASE_URL=http://localhost:3003
+    volumes:
+      - ./fe-admin-web-service:/app
+      - /app/node_modules
+    depends_on:
+      - user-service
+      - product-service
+      - order-service
+    networks:
+      - app-network
+
+  db-user:
+    image: postgres:15-alpine
+    container_name: db-user
+    environment:
+      - POSTGRES_DB=db-user
+      - POSTGRES_USER=user-service-db
+      - POSTGRES_PASSWORD=user@!4
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_user_data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U 'user-service-db' -d 'db-user' -h localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  db-product:
+    image: postgres:15-alpine
+    container_name: db-product
+    environment:
+      - POSTGRES_DB=db-product
+      - POSTGRES_USER=product-service-db
+      - POSTGRES_PASSWORD=product-service-password
+    ports:
+      - "5433:5432"
+    volumes:
+      - db_product_data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U 'product-service-db' -d 'db-product' -h localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  db-order:
+    image: postgres:15-alpine
+    container_name: db-order
+    environment:
+      - POSTGRES_DB=order_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - db_order_data:/var/lib/postgresql/data
+      - ./order-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d order_db -h localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=admin123
+      - RABBITMQ_DEFAULT_VHOST=/
+    ports:
+      - "5672:5672"   # AMQP port
+      - "15672:15672" # Management UI port
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  db_user_data:
+  db_product_data:
+  db_order_data:
+  rabbitmq_data:

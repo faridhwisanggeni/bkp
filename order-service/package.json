@@ -1,0 +1,33 @@
+{
+  "name": "order-service",
+  "version": "1.0.0",
+  "description": "Order Service for BKP Commerce",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "pg": "^8.11.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "helmet": "^6.1.5",
+    "morgan": "^1.10.0",
+    "joi": "^17.9.2",
+    "uuid": "^9.0.0",
+    "amqplib": "^0.10.3"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22"
+  },
+  "keywords": [
+    "order",
+    "service",
+    "nodejs",
+    "postgresql"
+  ],
+  "author": "BKP Commerce",
+  "license": "MIT"
+}

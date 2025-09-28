@@ -1,0 +1,29 @@
+{
+  "name": "product-service",
+  "version": "1.0.0",
+  "description": "Product and Promotion management service",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "jest"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "pg": "^8.11.3",
+    "cors": "^2.8.5",
+    "helmet": "^7.0.0",
+    "morgan": "^1.10.0",
+    "joi": "^17.9.2",
+    "bcrypt": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1",
+    "jest": "^29.6.2"
+  },
+  "keywords": ["product", "promotion", "api", "nodejs"],
+  "author": "Product Service Team",
+  "license": "MIT"
+}
