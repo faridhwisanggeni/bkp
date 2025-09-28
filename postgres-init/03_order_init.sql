@@ -1,6 +1,16 @@
 -- Order Service Database Initialization
 -- This file runs ONLY in db-order container
--- Note: db-order container already creates order_db as default database
+
+-- Create database if not exists
+SELECT 'CREATE DATABASE "order_db"' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'order_db')\gexec
+
+-- Note: db-order container uses postgres as default user, no need to create additional user
+
+-- Grant privileges (postgres user already has all privileges)
+-- GRANT ALL PRIVILEGES ON DATABASE "order_db" TO postgres; -- Already has privileges
+
+-- Connect to the order database
+\c order_db;
 
 -- Create order_header table
 CREATE TABLE IF NOT EXISTS order_header (

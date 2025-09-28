@@ -66,13 +66,13 @@ INSERT INTO users (name, email, role_id, is_active, password, created_by)
 VALUES 
   ('Admin User', 'admin@example.com', 
    (SELECT id FROM roles WHERE role_name = 'admin'), 
-   TRUE, '$2b$10$vI8aWY8I3fNVmGOqMQjKQeEjKJXllVCoqjB05Jcw/BPyT6shoFhye', 'system'),
+   TRUE, '$2b$10$F0t4cm5ru0qRcNjBgtCTwe70epGkwaX7.EnZBX4B26lBu7XeRISL6', 'system'),
   ('Sales Manager', 'sales@example.com', 
    (SELECT id FROM roles WHERE role_name = 'sales'), 
-   TRUE, '$2b$10$vI8aWY8I3fNVmGOqMQjKQeEjKJXllVCoqjB05Jcw/BPyT6shoFhye', 'system'),
+   TRUE, '$2b$10$w8FU3jiiun2mDN9eSc.lvul4sc8L44eVIQsIRTUDCYi4oLxvGo46O', 'system'),
   ('Customer User', 'customer@example.com', 
    (SELECT id FROM roles WHERE role_name = 'customer'), 
-   TRUE, '$2b$10$vI8aWY8I3fNVmGOqMQjKQeEjKJXllVCoqjB05Jcw/BPyT6shoFhye', 'system')
+   TRUE, '$2b$10$hYzNoOGc9CQJxETEA/X72O3bbvfwhd..liiZbvtyURPt8iVepTMkC', 'system')
 ON CONFLICT (email) DO NOTHING;
 
 -- Grant permissions to user-service-db user
