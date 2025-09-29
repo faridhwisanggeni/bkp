@@ -8,7 +8,11 @@ import { useToast, formatErrorMessage } from '../components/Toast'
 const Home = () => {
   const navigate = useNavigate()
   const { showSuccess, showError, showInfo } = useToast()
-  const [cart, setCart] = useState([])
+  const [cart, setCart] = useState(() => {
+    // Load cart from localStorage on component mount
+    const savedCart = localStorage.getItem('cart')
+    return savedCart ? JSON.parse(savedCart) : []
+  })
   const [showCart, setShowCart] = useState(false)
   const [showPromoDetail, setShowPromoDetail] = useState(false)
   const [selectedPromo, setSelectedPromo] = useState(null)
@@ -16,6 +20,11 @@ const Home = () => {
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [isAddingToCart, setIsAddingToCart] = useState(false)
+
+  // Save cart to localStorage whenever cart changes
+  useEffect(() => {
+    localStorage.setItem('cart', JSON.stringify(cart))
+  }, [cart])
 
   // Fetch promotions and products
   useEffect(() => {
@@ -185,9 +194,16 @@ const Home = () => {
     }
 
     try {
-      // Get username from localStorage or use default
-      const user = JSON.parse(localStorage.getItem('user') || '{}')
-      const username = user.username || 'guest'
+      // Get username from JWT token
+      const token = localStorage.getItem('accessToken')
+      if (!token) {
+        showError('Please login to place an order')
+        return
+      }
+      
+      // Decode JWT to get username
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      const username = payload.email || 'guest'
 
       // Prepare order data
       const orderData = {
@@ -213,7 +229,8 @@ const Home = () => {
       if (response.data.success) {
         const orderId = response.data.data.order_id
         showSuccess(`Order created successfully! Order ID: ${orderId.slice(-8)}`)
-        setCart([]) // Clear cart
+        setCart([]) // Clear cart (will auto-save to localStorage via useEffect)
+        localStorage.removeItem('cart') // Explicitly clear cart from localStorage
         setShowCart(false)
         
         // Check order status after a delay to see if it gets cancelled

@@ -93,8 +93,17 @@ const OrderHistory = () => {
   const fetchOrders = async () => {
     try {
       setLoading(true)
-      const user = JSON.parse(localStorage.getItem('user') || '{}')
-      const username = user.username || 'guest'
+      
+      // Get username from JWT token
+      const token = localStorage.getItem('accessToken')
+      if (!token) {
+        showError('Please login to view your orders')
+        return
+      }
+      
+      // Decode JWT to get username
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      const username = payload.email || 'guest'
 
       const response = await orderApi.get(`/api/orders/user/${username}`)
       

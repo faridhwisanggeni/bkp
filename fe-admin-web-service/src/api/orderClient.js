@@ -13,7 +13,7 @@ const orderApi = axios.create({
 orderApi.interceptors.request.use(
   (config) => {
     // Add auth token if available
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('accessToken')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
