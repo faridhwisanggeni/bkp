@@ -5,10 +5,12 @@ const morgan = require('morgan');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const { createProxyMiddleware } = require('http-proxy-middleware');
+const http = require('http');
 require('dotenv').config();
 
 const authMiddleware = require('./middleware/auth');
 const healthCheck = require('./middleware/health');
+const { transformAuthResponse } = require('./middleware/responseTransform');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -56,16 +58,28 @@ const createProxy = (target, pathRewrite = {}) => {
     pathRewrite,
     timeout: 30000,
     proxyTimeout: 30000,
+    followRedirects: true,
+    secure: false,
     onError: (err, req, res) => {
       console.error(`❌ Proxy error for ${req.url}:`, err.message);
-      res.status(503).json({
-        success: false,
-        message: 'Service temporarily unavailable',
-        error: 'PROXY_ERROR'
-      });
+      if (!res.headersSent) {
+        res.status(503).json({
+          success: false,
+          message: 'Service temporarily unavailable',
+          error: 'PROXY_ERROR',
+          details: err.message
+        });
+      }
     },
     onProxyReq: (proxyReq, req, res) => {
-      console.log(`🔄 Proxying ${req.method} ${req.url} to ${target}`);
+      // Fix content-length for body requests
+      if (req.body && (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH')) {
+        const bodyData = JSON.stringify(req.body);
+        proxyReq.setHeader('Content-Type', 'application/json');
+        proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
+        proxyReq.write(bodyData);
+      }
+      console.log(`🔄 Proxying ${req.method} ${req.url} to ${target}${req.url}`);
     },
     onProxyRes: (proxyRes, req, res) => {
       console.log(`✅ Response ${proxyRes.statusCode} for ${req.method} ${req.url}`);
@@ -73,10 +87,102 @@ const createProxy = (target, pathRewrite = {}) => {
   });
 };
 
-// Authentication Routes (No auth required)
-app.use('/api/auth', createProxy(SERVICES.USER_SERVICE, {
-  '^/api/auth': '/auth'
-}));
+// Helper function for HTTP requests
+const makeHttpRequest = (url, method, data) => {
+  return new Promise((resolve, reject) => {
+    const urlObj = new URL(url);
+    const options = {
+      hostname: urlObj.hostname,
+      port: urlObj.port,
+      path: urlObj.pathname,
+      method: method,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    };
+
+    const req = http.request(options, (res) => {
+      let body = '';
+      res.on('data', (chunk) => {
+        body += chunk;
+      });
+      res.on('end', () => {
+        try {
+          const parsedBody = JSON.parse(body);
+          resolve({
+            status: res.statusCode,
+            data: parsedBody
+          });
+        } catch (e) {
+          resolve({
+            status: res.statusCode,
+            data: body
+          });
+        }
+      });
+    });
+
+    req.on('error', (error) => {
+      reject(error);
+    });
+
+    if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
+      req.write(JSON.stringify(data));
+    }
+    req.end();
+  });
+};
+
+// Authentication Routes (No auth required) - manual handling for response wrapping
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    console.log('🔄 Auth login request to user-service');
+    const response = await makeHttpRequest(`${SERVICES.USER_SERVICE}/auth/login`, 'POST', req.body);
+    
+    if (response.status === 200) {
+      console.log('✅ Auth login successful, wrapping response');
+      // Wrap in consistent format
+      res.json({
+        success: true,
+        data: response.data
+      });
+    } else {
+      res.status(response.status).json(response.data);
+    }
+  } catch (error) {
+    console.error('❌ Auth login error:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Authentication service unavailable',
+      error: 'AUTH_SERVICE_ERROR'
+    });
+  }
+});
+
+app.post('/api/auth/refresh', async (req, res) => {
+  try {
+    console.log('🔄 Auth refresh request to user-service');
+    const response = await makeHttpRequest(`${SERVICES.USER_SERVICE}/auth/refresh`, 'POST', req.body);
+    
+    if (response.status === 200) {
+      console.log('✅ Auth refresh successful, wrapping response');
+      // Wrap in consistent format
+      res.json({
+        success: true,
+        data: response.data
+      });
+    } else {
+      res.status(response.status).json(response.data);
+    }
+  } catch (error) {
+    console.error('❌ Auth refresh error:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Authentication service unavailable',
+      error: 'AUTH_SERVICE_ERROR'
+    });
+  }
+});
 
 // Public health checks
 app.use('/api/health', createProxy(SERVICES.USER_SERVICE, {
