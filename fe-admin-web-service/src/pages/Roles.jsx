@@ -50,10 +50,10 @@ const Roles = () => {
       
       // Fetch roles and users in parallel to calculate user counts
       const [rolesResponse, usersResponse] = await Promise.all([
-        fetch('http://localhost:3000/api/roles', {
+        fetch('http://localhost:8080/api/roles', {
           headers: { 'Authorization': `Bearer ${token}` }
         }),
-        fetch('http://localhost:3000/api/users', {
+        fetch('http://localhost:8080/api/users', {
           headers: { 'Authorization': `Bearer ${token}` }
         })
       ])
@@ -139,8 +139,8 @@ const Roles = () => {
     try {
       const token = localStorage.getItem('accessToken')
       const url = modalType === 'create' 
-        ? 'http://localhost:3000/api/roles'
-        : `http://localhost:3000/api/roles/${selectedRole.id}`
+        ? 'http://localhost:8080/api/roles'
+        : `http://localhost:8080/api/roles/${selectedRole.id}`
       
       const method = modalType === 'create' ? 'POST' : 'PUT'
       

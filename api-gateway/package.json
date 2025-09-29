@@ -1,0 +1,32 @@
+{
+  "name": "api-gateway",
+  "version": "1.0.0",
+  "description": "API Gateway for BKP Commerce - Single entry point for all services",
+  "main": "gateway.js",
+  "scripts": {
+    "start": "node gateway.js",
+    "dev": "nodemon gateway.js"
+  },
+  "dependencies": {
+    "axios": "^1.12.2",
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^6.10.0",
+    "helmet": "^7.0.0",
+    "http-proxy-middleware": "^2.0.6",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": [
+    "api-gateway",
+    "microservices",
+    "proxy",
+    "nodejs"
+  ],
+  "author": "BKP Commerce Team"
+}

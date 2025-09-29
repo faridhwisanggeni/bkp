@@ -1,4 +1,4 @@
-.PHONY: up down restart logs status clean test test-coverage test-unit test-integration test-user test-product test-order test-user-coverage test-product-coverage test-order-coverage setup-permissions help
+.PHONY: up down restart logs status clean test test-coverage test-unit test-integration test-user test-product test-order test-user-coverage test-product-coverage test-order-coverage test-frontend test-frontend-unit test-frontend-coverage test-frontend-e2e test-frontend-stress test-frontend-lint test-all setup-permissions help
 
 # Default target
 help:
@@ -12,12 +12,12 @@ help:
 	@echo "  make status  - Show status of all containers"
 	@echo "  make clean   - Deep clean (remove everything)"
 	@echo ""
-	@echo "🧪 Testing Commands:"
+	@echo "🧪 Backend Testing Commands:"
 	@echo ""
-	@echo "  make test           - Run all tests (unit + integration)"
-	@echo "  make test-unit      - Run unit tests only"
-	@echo "  make test-coverage  - Run tests with coverage report"
-	@echo "  make test-integration - Run integration tests only"
+	@echo "  make test           - Run all backend tests (unit + integration)"
+	@echo "  make test-unit      - Run backend unit tests only"
+	@echo "  make test-coverage  - Run backend tests with coverage report"
+	@echo "  make test-integration - Run backend integration tests only"
 	@echo ""
 	@echo "  make test-user      - Test user-service only"
 	@echo "  make test-product   - Test product-service only"
@@ -26,6 +26,19 @@ help:
 	@echo "  make test-user-coverage    - User service with coverage"
 	@echo "  make test-product-coverage - Product service with coverage"
 	@echo "  make test-order-coverage   - Order service with coverage"
+	@echo ""
+	@echo "🎨 Frontend Testing Commands:"
+	@echo ""
+	@echo "  make test-frontend         - Run all frontend tests"
+	@echo "  make test-frontend-unit    - Run frontend unit tests"
+	@echo "  make test-frontend-coverage - Run frontend tests with coverage"
+	@echo "  make test-frontend-e2e     - Run frontend E2E tests"
+	@echo "  make test-frontend-stress  - Run frontend stress tests"
+	@echo "  make test-frontend-lint    - Run frontend code quality checks"
+	@echo ""
+	@echo "🚀 Combined Testing Commands:"
+	@echo ""
+	@echo "  make test-all       - Run ALL tests (backend + frontend)"
 	@echo ""
 	@echo "🔧 Utility Commands:"
 	@echo ""
@@ -130,8 +143,47 @@ test-order-coverage:
 	@chmod +x run-tests.sh
 	@./run-tests.sh coverage order-service
 
+# Frontend testing commands
+test-frontend:
+	@echo "🎨 Running all frontend tests..."
+	@cd fe-admin-web-service && chmod +x run-tests.sh && ./run-tests.sh all
+
+test-frontend-unit:
+	@echo "🧪 Running frontend unit tests..."
+	@cd fe-admin-web-service && chmod +x run-tests.sh && ./run-tests.sh unit
+
+test-frontend-coverage:
+	@echo "📊 Running frontend tests with coverage..."
+	@cd fe-admin-web-service && chmod +x run-tests.sh && ./run-tests.sh coverage
+
+test-frontend-e2e:
+	@echo "🔗 Running frontend E2E tests..."
+	@cd fe-admin-web-service && chmod +x run-tests.sh && ./run-tests.sh e2e
+
+test-frontend-stress:
+	@echo "⚡ Running frontend stress tests..."
+	@cd fe-admin-web-service && chmod +x run-tests.sh && ./run-tests.sh stress
+
+test-frontend-lint:
+	@echo "🔍 Running frontend code quality checks..."
+	@cd fe-admin-web-service && chmod +x run-tests.sh && ./run-tests.sh lint
+
+# Combined testing command
+test-all:
+	@echo "🚀 Running ALL tests (backend + frontend)..."
+	@echo ""
+	@echo "📋 Step 1: Backend Tests"
+	@make test
+	@echo ""
+	@echo "📋 Step 2: Frontend Tests"
+	@make test-frontend-unit
+	@make test-frontend-coverage
+	@echo ""
+	@echo "🎉 All tests completed successfully!"
+
 # Setup file permissions
 setup-permissions:
 	@echo "🔧 Setting up file permissions..."
 	@chmod +x setup-permissions.sh
 	@./setup-permissions.sh
+	@chmod +x fe-admin-web-service/run-tests.sh

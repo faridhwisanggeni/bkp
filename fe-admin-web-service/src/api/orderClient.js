@@ -1,9 +1,8 @@
 import axios from 'axios'
 
 const ORDER_API_BASE_URL = import.meta.env.VITE_ORDER_API_BASE_URL || 'http://localhost:3003'
-
 const orderApi = axios.create({
-  baseURL: ORDER_API_BASE_URL,
+  baseURL: import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:8080',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',

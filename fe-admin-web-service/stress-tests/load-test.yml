@@ -1,0 +1,225 @@
+config:
+  target: 'http://localhost:3000'  # User service
+  phases:
+    # Warm-up phase
+    - duration: 30
+      arrivalRate: 5
+      name: "Warm-up"
+    # Ramp-up phase
+    - duration: 60
+      arrivalRate: 10
+      rampTo: 50
+      name: "Ramp-up"
+    # Sustained load phase
+    - duration: 120
+      arrivalRate: 50
+      name: "Sustained load"
+    # Peak load phase
+    - duration: 60
+      arrivalRate: 100
+      name: "Peak load"
+    # Cool-down phase
+    - duration: 30
+      arrivalRate: 10
+      name: "Cool-down"
+  
+  # Global configuration
+  timeout: 30
+  
+  # Variables for test data
+  variables:
+    testEmails:
+      - "admin@example.com"
+      - "sales@example.com"
+      - "user1@example.com"
+      - "user2@example.com"
+      - "user3@example.com"
+    testPasswords:
+      - "ChangeMeAdmin123!"
+      - "ChangeMeSales123!"
+      - "ChangeMe123!"
+  
+  # Plugins for enhanced reporting
+  plugins:
+    metrics-by-endpoint:
+      useOnlyRequestNames: true
+    
+  # Performance thresholds
+  ensure:
+    thresholds:
+      - http.response_time.p95: 1000  # 95% of requests should complete within 1s
+      - http.response_time.p99: 2000  # 99% of requests should complete within 2s
+      - http.codes.200: 95            # 95% success rate minimum
+      - http.codes.401: 5             # Allow up to 5% auth failures
+
+scenarios:
+  # Authentication stress test
+  - name: "Authentication Load Test"
+    weight: 40
+    flow:
+      - post:
+          url: "/api/auth/login"
+          name: "Login"
+          json:
+            email: "{{ $randomPick(testEmails) }}"
+            password: "{{ $randomPick(testPasswords) }}"
+          capture:
+            - json: "$.accessToken"
+              as: "accessToken"
+            - json: "$.refreshToken"
+              as: "refreshToken"
+          expect:
+            - statusCode: [200, 401]  # Accept both success and auth failures
+      
+      # Test token refresh if login was successful
+      - post:
+          url: "/api/auth/refresh"
+          name: "Token Refresh"
+          json:
+            refreshToken: "{{ refreshToken }}"
+          ifTrue: "accessToken"  # Only if we got a token from login
+          expect:
+            - statusCode: [200, 401]
+
+  # User management stress test
+  - name: "User Management Load Test"
+    weight: 30
+    flow:
+      # Login first
+      - post:
+          url: "/api/auth/login"
+          name: "Admin Login"
+          json:
+            email: "admin@example.com"
+            password: "ChangeMeAdmin123!"
+          capture:
+            - json: "$.accessToken"
+              as: "adminToken"
+      
+      # Get users list
+      - get:
+          url: "/api/users"
+          name: "Get Users"
+          headers:
+            Authorization: "Bearer {{ adminToken }}"
+          ifTrue: "adminToken"
+          expect:
+            - statusCode: [200, 401]
+      
+      # Create a test user
+      - post:
+          url: "/api/users"
+          name: "Create User"
+          headers:
+            Authorization: "Bearer {{ adminToken }}"
+          json:
+            username: "testuser{{ $randomInt(1, 10000) }}"
+            email: "test{{ $randomInt(1, 10000) }}@example.com"
+            password: "TestPassword123!"
+            role: "user"
+          ifTrue: "adminToken"
+          capture:
+            - json: "$.data.id"
+              as: "newUserId"
+          expect:
+            - statusCode: [200, 201, 400, 401]
+      
+      # Update the created user
+      - put:
+          url: "/api/users/{{ newUserId }}"
+          name: "Update User"
+          headers:
+            Authorization: "Bearer {{ adminToken }}"
+          json:
+            username: "updated{{ $randomInt(1, 10000) }}"
+            email: "updated{{ $randomInt(1, 10000) }}@example.com"
+          ifTrue: "newUserId"
+          expect:
+            - statusCode: [200, 400, 401, 404]
+
+  # Product service stress test
+  - name: "Product Service Load Test"
+    weight: 20
+    flow:
+      # Login to get token
+      - post:
+          url: "http://localhost:3000/api/auth/login"
+          name: "Login for Products"
+          json:
+            email: "admin@example.com"
+            password: "ChangeMeAdmin123!"
+          capture:
+            - json: "$.accessToken"
+              as: "token"
+      
+      # Get products
+      - get:
+          url: "http://localhost:3002/api/products"
+          name: "Get Products"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          ifTrue: "token"
+          expect:
+            - statusCode: [200, 401]
+      
+      # Create product
+      - post:
+          url: "http://localhost:3002/api/products"
+          name: "Create Product"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            name: "Test Product {{ $randomInt(1, 10000) }}"
+            price: "{{ $randomInt(10, 1000) }}"
+            stock: "{{ $randomInt(1, 100) }}"
+            description: "Test product description"
+          ifTrue: "token"
+          capture:
+            - json: "$.data.id"
+              as: "productId"
+          expect:
+            - statusCode: [200, 201, 400, 401]
+
+  # Order service stress test
+  - name: "Order Service Load Test"
+    weight: 10
+    flow:
+      # Login
+      - post:
+          url: "http://localhost:3000/api/auth/login"
+          name: "Login for Orders"
+          json:
+            email: "admin@example.com"
+            password: "ChangeMeAdmin123!"
+          capture:
+            - json: "$.accessToken"
+              as: "orderToken"
+      
+      # Get orders
+      - get:
+          url: "http://localhost:3003/api/orders"
+          name: "Get Orders"
+          headers:
+            Authorization: "Bearer {{ orderToken }}"
+          ifTrue: "orderToken"
+          expect:
+            - statusCode: [200, 401]
+      
+      # Create order
+      - post:
+          url: "http://localhost:3003/api/orders"
+          name: "Create Order"
+          headers:
+            Authorization: "Bearer {{ orderToken }}"
+          json:
+            userId: 1
+            products:
+              - id: 1
+                quantity: "{{ $randomInt(1, 5) }}"
+            total: "{{ $randomInt(50, 500) }}"
+          ifTrue: "orderToken"
+          expect:
+            - statusCode: [200, 201, 400, 401]
+
+# Custom functions for data generation
+processor: "./stress-test-processor.js"

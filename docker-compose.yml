@@ -234,6 +234,36 @@ services:
     networks:
       - app-network
 
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+      no_cache: true
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./api-gateway:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=8080
+      - CORS_ORIGIN=http://localhost:5173
+      - JWT_ACCESS_SECRET=dev_access_secret_change_me
+      - USER_SERVICE_URL=http://user-service:3000
+      - PRODUCT_SERVICE_URL=http://product-service:3002
+      - ORDER_SERVICE_URL=http://order-service:3003
+    restart: unless-stopped
+    networks:
+      - app-network
+    depends_on:
+      user-service:
+        condition: service_started
+      product-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+
 networks:
   app-network:
     driver: bridge

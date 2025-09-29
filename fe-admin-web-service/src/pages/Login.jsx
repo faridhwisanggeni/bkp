@@ -12,13 +12,19 @@ function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const { showSuccess, showError } = useToast()
   const navigate = useNavigate()
-
   const onSubmit = async (e) => {
     e.preventDefault()
     setError('')
     setLoading(true)
     try {
-      const res = await api.post('/auth/login', { email, password })
+      const response = await fetch('http://localhost:8080/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+      })
+      const res = await response.json()
       const { accessToken, refreshToken } = res.data
       
       // Decode payload to get role

@@ -63,10 +63,10 @@ const Users = () => {
       
       // Fetch users and roles in parallel
       const [usersResponse, rolesResponse] = await Promise.all([
-        fetch('http://localhost:3000/api/users', {
+        fetch('http://localhost:8080/api/users', {
           headers: { 'Authorization': `Bearer ${token}` }
         }),
-        fetch('http://localhost:3000/api/roles', {
+        fetch('http://localhost:8080/api/roles', {
           headers: { 'Authorization': `Bearer ${token}` }
         })
       ])
@@ -101,7 +101,7 @@ const Users = () => {
   const fetchRoles = async () => {
     try {
       const token = localStorage.getItem('accessToken')
-      const response = await fetch('http://localhost:3000/api/roles', {
+      const response = await fetch('http://localhost:8080/api/roles', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -185,8 +185,8 @@ const Users = () => {
     try {
       const token = localStorage.getItem('accessToken')
       const url = modalType === 'create' 
-        ? 'http://localhost:3000/api/users'
-        : `http://localhost:3000/api/users/${selectedUser.id}`
+        ? 'http://localhost:8080/api/users'
+        : `http://localhost:8080/api/users/${selectedUser.id}`
       
       const method = modalType === 'create' ? 'POST' : 'PUT'
       

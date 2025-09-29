@@ -1,8 +1,8 @@
 import axios from 'axios'
 
-// Product service API client
+// Product service API client via API Gateway
 const productApi = axios.create({
-  baseURL: import.meta.env.VITE_PRODUCT_API_BASE_URL || 'http://localhost:3002',
+  baseURL: import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:8080',
   timeout: 10000,
 })
 
@@ -21,8 +21,8 @@ productApi.interceptors.response.use(
     if (error.response?.status === 401 && !original._retry && localStorage.getItem('refreshToken')) {
       original._retry = true
       try {
-        // Use user service for refresh
-        const refreshRes = await axios.post('http://localhost:3000/auth/refresh', {
+        // Use API Gateway for refresh
+        const refreshRes = await axios.post('http://localhost:8080/api/auth/refresh', {
           refreshToken: localStorage.getItem('refreshToken'),
         })
         const newAccess = refreshRes.data.accessToken
