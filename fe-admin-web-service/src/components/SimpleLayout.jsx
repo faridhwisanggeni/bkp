@@ -29,8 +29,7 @@ const SimpleLayout = () => {
       case 'admin':
         return [
           { name: 'Users', icon: Users, path: '/users' },
-          { name: 'Roles', icon: Shield, path: '/roles' },
-          { name: 'Orders', icon: ShoppingBag, path: '/orders' }
+          { name: 'Roles', icon: Shield, path: '/roles' }
         ]
       case 'sales':
         return [
