@@ -9,10 +9,13 @@ class RedisClient {
   async connect() {
     try {
       this.client = redis.createClient({
-        host: process.env.REDIS_HOST || 'localhost',
-        port: process.env.REDIS_PORT || 6379,
+        socket: {
+          host: process.env.REDIS_HOST || 'localhost',
+          port: process.env.REDIS_PORT || 6379,
+          family: 4 // Force IPv4
+        },
         password: process.env.REDIS_PASSWORD || undefined,
-        db: process.env.REDIS_DB || 0,
+        database: process.env.REDIS_DB || 0,
         retry_strategy: (options) => {
           if (options.error && options.error.code === 'ECONNREFUSED') {
             console.log('❌ Redis server connection refused');

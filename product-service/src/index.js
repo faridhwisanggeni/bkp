@@ -24,8 +24,13 @@ async function startServer() {
   try {
     await testConnection();
     
-    // Connect to Redis
-    await redisClient.connect();
+    // Connect to Redis (non-blocking)
+    try {
+      await redisClient.connect();
+      console.log('✅ Redis connected successfully');
+    } catch (error) {
+      console.log('⚠️ Redis connection failed, continuing without cache:', error.message);
+    }
     
     // Connect to RabbitMQ
     await rabbitmqService.connect();
