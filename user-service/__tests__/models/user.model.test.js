@@ -1,131 +1,83 @@
 const UserModel = require('../../src/models/user.model');
-const pool = require('../../src/config/database');
 
-// Mock database pool
-jest.mock('../../src/config/database');
+// Mock database pool - NO REAL DATABASE ACCESS
+jest.mock('../../src/db/pool', () => ({
+  pool: {
+    query: jest.fn()
+  }
+}));
+
+const { pool } = require('../../src/db/pool');
 
 describe('UserModel', () => {
-  let mockClient;
-
   beforeEach(() => {
-    mockClient = {
-      query: jest.fn(),
-      release: jest.fn()
-    };
-    pool.query = jest.fn();
-    pool.connect = jest.fn().mockResolvedValue(mockClient);
     jest.clearAllMocks();
   });
 
-  describe('findByEmail', () => {
-    it('should find user by email', async () => {
-      const mockUser = {
-        id: 1,
-        name: 'Test User',
-        email: 'test@example.com',
-        role_id: 1
-      };
-
-      pool.query.mockResolvedValue({ rows: [mockUser] });
-
-      const result = await UserModel.findByEmail('test@example.com');
-
-      expect(result).toEqual(mockUser);
-      expect(pool.query).toHaveBeenCalledWith(
-        'SELECT * FROM users WHERE email = $1',
-        ['test@example.com']
-      );
-    });
-
-    it('should return null if user not found', async () => {
-      pool.query.mockResolvedValue({ rows: [] });
-
-      const result = await UserModel.findByEmail('nonexistent@example.com');
-
-      expect(result).toBeNull();
-    });
-
-    it('should handle database errors', async () => {
-      pool.query.mockRejectedValue(new Error('Database connection failed'));
-
-      await expect(UserModel.findByEmail('test@example.com'))
-        .rejects.toThrow('Database connection failed');
-    });
-  });
-
-  describe('findByEmailWithRole', () => {
-    it('should find user with role information', async () => {
-      const mockUserWithRole = {
-        id: 1,
-        name: 'Test User',
-        email: 'test@example.com',
-        password: 'hashedPassword',
-        role_id: 1,
-        role_name: 'admin',
-        is_active: true
-      };
-
-      pool.query.mockResolvedValue({ rows: [mockUserWithRole] });
-
-      const result = await UserModel.findByEmailWithRole('test@example.com');
-
-      expect(result).toEqual(mockUserWithRole);
-      expect(pool.query).toHaveBeenCalledWith(
-        expect.stringContaining('JOIN roles'),
-        ['test@example.com']
-      );
-    });
-  });
-
-  describe('findById', () => {
+  describe('getById', () => {
     it('should find user by id', async () => {
       const mockUser = {
         id: 1,
         name: 'Test User',
         email: 'test@example.com',
-        role_id: 1
+        role_id: 1,
+        is_active: true
       };
 
       pool.query.mockResolvedValue({ rows: [mockUser] });
 
-      const result = await UserModel.findById(1);
+      const result = await UserModel.getById(1);
 
       expect(result).toEqual(mockUser);
       expect(pool.query).toHaveBeenCalledWith(
-        'SELECT * FROM users WHERE id = $1',
+        expect.stringContaining('SELECT'),
         [1]
       );
     });
 
-    it('should return null if user not found', async () => {
+    it('should return undefined if user not found', async () => {
       pool.query.mockResolvedValue({ rows: [] });
 
-      const result = await UserModel.findById(999);
+      const result = await UserModel.getById(999);
 
-      expect(result).toBeNull();
+      expect(result).toBeUndefined();
     });
   });
 
-  describe('findByIdWithRole', () => {
-    it('should find user by id with role information', async () => {
-      const mockUserWithRole = {
-        id: 1,
-        name: 'Test User',
-        email: 'test@example.com',
-        role_id: 1,
-        role_name: 'admin',
-        is_active: true
-      };
+  describe('list', () => {
+    it('should return all users', async () => {
+      const mockUsers = [
+        {
+          id: 1,
+          name: 'User 1',
+          email: 'user1@example.com',
+          role_id: 1,
+          is_active: true
+        },
+        {
+          id: 2,
+          name: 'User 2',
+          email: 'user2@example.com',
+          role_id: 2,
+          is_active: true
+        }
+      ];
 
-      pool.query.mockResolvedValue({ rows: [mockUserWithRole] });
+      pool.query.mockResolvedValue({ rows: mockUsers });
 
-      const result = await UserModel.findByIdWithRole(1);
+      const result = await UserModel.list();
 
-      expect(result).toEqual(mockUserWithRole);
+      expect(result).toEqual(mockUsers);
       expect(pool.query).toHaveBeenCalledWith(
-        expect.stringContaining('JOIN roles'),
-        [1]
+        expect.stringContaining('SELECT')
       );
+    });
+
+    it('should handle database errors', async () => {
+      pool.query.mockRejectedValue(new Error('Database error'));
+
+      await expect(UserModel.list())
+        .rejects.toThrow('Database error');
     });
   });
 
@@ -135,13 +87,13 @@ describe('UserModel', () => {
         name: 'New User',
         email: 'new@example.com',
         password: 'hashedPassword',
-        role_id: 2
+        role_id: 2,
+        is_active: true
       };
 
       const createdUser = {
-        id: 1,
+        id: 3,
         ...userData,
-        is_active: true,
         created_at: new Date(),
         updated_at: new Date()
       };
@@ -157,7 +109,8 @@ describe('UserModel', () => {
           userData.name,
           userData.email,
           userData.password,
-          userData.role_id
+          userData.role_id,
+          userData.is_active
         ])
       );
     });
@@ -200,63 +153,57 @@ describe('UserModel', () => {
       expect(pool.query).toHaveBeenCalledWith(
         expect.stringContaining('UPDATE users'),
         expect.arrayContaining([
+          1,
           updateData.name,
           updateData.email,
           updateData.role_id,
-          updateData.is_active,
-          1
+          updateData.is_active
         ])
       );
     });
 
-    it('should return null if user not found', async () => {
+    it('should return undefined if user not found', async () => {
       pool.query.mockResolvedValue({ rows: [] });
 
       const result = await UserModel.update(999, { name: 'Updated' });
 
-      expect(result).toBeNull();
+      expect(result).toBeUndefined();
+    });
+
+    it('should handle database errors', async () => {
+      pool.query.mockRejectedValue(new Error('Database error'));
+
+      await expect(UserModel.update(1, { name: 'Updated' }))
+        .rejects.toThrow('Database error');
     });
   });
 
-  describe('findAllWithRoles', () => {
-    it('should find all users with pagination', async () => {
-      const mockUsers = [
-        { id: 1, name: 'User 1', email: 'user1@example.com', role_name: 'admin' },
-        { id: 2, name: 'User 2', email: 'user2@example.com', role_name: 'sales' }
-      ];
+  describe('remove', () => {
+    it('should remove user successfully', async () => {
+      pool.query.mockResolvedValue({ rowCount: 1 });
 
-      pool.query.mockResolvedValue({ rows: mockUsers });
+      const result = await UserModel.remove(1);
 
-      const result = await UserModel.findAllWithRoles({
-        page: 1,
-        limit: 10
-      });
-
-      expect(result).toEqual(mockUsers);
+      expect(result).toBe(true);
       expect(pool.query).toHaveBeenCalledWith(
-        expect.stringContaining('JOIN roles'),
-        [10, 0]
+        'DELETE FROM users WHERE id = $1',
+        [1]
       );
     });
 
-    it('should handle search parameter', async () => {
-      const mockUsers = [
-        { id: 1, name: 'John Doe', email: 'john@example.com', role_name: 'admin' }
-      ];
+    it('should return false if user not found', async () => {
+      pool.query.mockResolvedValue({ rowCount: 0 });
 
-      pool.query.mockResolvedValue({ rows: mockUsers });
+      const result = await UserModel.remove(999);
 
-      const result = await UserModel.findAllWithRoles({
-        page: 1,
-        limit: 10,
-        search: 'john'
-      });
+      expect(result).toBe(false);
+    });
 
-      expect(result).toEqual(mockUsers);
-      expect(pool.query).toHaveBeenCalledWith(
-        expect.stringContaining('WHERE'),
-        expect.arrayContaining(['%john%', '%john%', 10, 0])
-      );
+    it('should handle database errors', async () => {
+      pool.query.mockRejectedValue(new Error('Database error'));
+
+      await expect(UserModel.remove(1))
+        .rejects.toThrow('Database error');
     });
   });
 });

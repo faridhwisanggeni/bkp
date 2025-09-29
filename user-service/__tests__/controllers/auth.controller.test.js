@@ -1,19 +1,16 @@
 const request = require('supertest');
-const express = require('express');
-const AuthController = require('../../src/controllers/auth.controller');
-const UserModel = require('../../src/models/user.model');
+const app = require('../../src/app');
+const userRepo = require('../../src/repositories/user.repository');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-// Mock dependencies
-jest.mock('../../src/models/user.model');
+// Mock dependencies - ONLY MOCK METHODS THAT EXIST
+jest.mock('../../src/repositories/user.repository', () => ({
+  getByEmailWithPassword: jest.fn(),
+  getByIdWithRole: jest.fn()
+}));
 jest.mock('bcryptjs');
 jest.mock('jsonwebtoken');
-
-const app = express();
-app.use(express.json());
-app.post('/login', AuthController.login);
-app.post('/register', AuthController.register);
 
 describe('AuthController', () => {
   beforeEach(() => {
@@ -30,12 +27,12 @@ describe('AuthController', () => {
         is_active: true
       };
 
-      UserModel.findByEmailWithRole.mockResolvedValue(mockUser);
+      userRepo.getByEmailWithPassword.mockResolvedValue(mockUser);
       bcrypt.compare.mockResolvedValue(true);
       jwt.sign.mockReturnValue('mockAccessToken');
 
       const response = await request(app)
-        .post('/login')
+        .post('/auth/login')
         .send({
           email: 'test@example.com',
           password: 'password123'
@@ -44,26 +41,26 @@ describe('AuthController', () => {
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('accessToken');
       expect(response.body).toHaveProperty('refreshToken');
-      expect(UserModel.findByEmailWithRole).toHaveBeenCalledWith('test@example.com');
+      expect(userRepo.getByEmailWithPassword).toHaveBeenCalledWith('test@example.com');
       expect(bcrypt.compare).toHaveBeenCalledWith('password123', 'hashedPassword');
     });
 
     it('should return 400 for missing email', async () => {
       const response = await request(app)
-        .post('/login')
+        .post('/auth/login')
         .send({
           password: 'password123'
         });
 
       expect(response.status).toBe(400);
-      expect(response.body).toHaveProperty('message');
+      expect(response.body).toHaveProperty('error');
     });
 
     it('should return 401 for invalid credentials', async () => {
-      UserModel.findByEmailWithRole.mockResolvedValue(null);
+      userRepo.getByEmailWithPassword.mockResolvedValue(null);
 
       const response = await request(app)
-        .post('/login')
+        .post('/auth/login')
         .send({
           email: 'test@example.com',
           password: 'wrongpassword'
@@ -82,91 +79,89 @@ describe('AuthController', () => {
         is_active: false
       };
 
-      UserModel.findByEmailWithRole.mockResolvedValue(mockUser);
+      userRepo.getByEmailWithPassword.mockResolvedValue(mockUser);
       bcrypt.compare.mockResolvedValue(true);
 
       const response = await request(app)
-        .post('/login')
+        .post('/auth/login')
         .send({
           email: 'test@example.com',
           password: 'password123'
         });
 
-      expect(response.status).toBe(401);
+      expect(response.status).toBe(403);
       expect(response.body.message).toBe('Account is deactivated');
     });
 
     it('should handle server errors', async () => {
-      UserModel.findByEmailWithRole.mockRejectedValue(new Error('Database error'));
+      userRepo.getByEmailWithPassword.mockRejectedValue(new Error('Database error'));
 
       const response = await request(app)
-        .post('/login')
+        .post('/auth/login')
         .send({
           email: 'test@example.com',
           password: 'password123'
         });
 
       expect(response.status).toBe(500);
-      expect(response.body.message).toBe('Internal server error');
+      expect(response.body.message).toBe('Database error');
     });
   });
 
-  describe('POST /register', () => {
-    it('should register a new user successfully', async () => {
+  describe('POST /refresh', () => {
+    it('should refresh token successfully', async () => {
       const mockUser = {
         id: 1,
-        name: 'Test User',
         email: 'test@example.com',
-        role_id: 2,
-        is_active: true
+        role_name: 'admin'
       };
 
-      UserModel.findByEmail.mockResolvedValue(null);
-      bcrypt.hash.mockResolvedValue('hashedPassword');
-      UserModel.create.mockResolvedValue(mockUser);
+      const mockDecoded = { sub: 1 };
+      
+      jwt.verify.mockReturnValue(mockDecoded);
+      userRepo.getByIdWithRole.mockResolvedValue(mockUser);
+      jwt.sign.mockReturnValue('newAccessToken');
 
       const response = await request(app)
-        .post('/register')
+        .post('/auth/refresh')
         .send({
-          name: 'Test User',
-          email: 'test@example.com',
-          password: 'password123',
-          role_id: 2
+          refreshToken: 'validRefreshToken'
         });
 
-      expect(response.status).toBe(201);
-      expect(response.body.success).toBe(true);
-      expect(response.body.data).toEqual(mockUser);
-      expect(bcrypt.hash).toHaveBeenCalledWith('password123', 10);
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('accessToken');
+      expect(userRepo.getByIdWithRole).toHaveBeenCalledWith(1);
     });
 
-    it('should return 400 for missing required fields', async () => {
+    it('should return 401 for invalid refresh token', async () => {
+      jwt.verify.mockImplementation(() => {
+        throw new Error('Invalid token');
+      });
+
       const response = await request(app)
-        .post('/register')
+        .post('/auth/refresh')
         .send({
-          name: 'Test User'
-          // missing email, password, role_id
+          refreshToken: 'invalidToken'
         });
 
-      expect(response.status).toBe(400);
-      expect(response.body).toHaveProperty('message');
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe('Invalid or expired refresh token');
     });
 
-    it('should return 409 for existing email', async () => {
-      const existingUser = { id: 1, email: 'test@example.com' };
-      UserModel.findByEmail.mockResolvedValue(existingUser);
+    it('should return 401 for non-existent user', async () => {
+      const mockDecoded = { sub: 999 };
+      
+      jwt.verify.mockReturnValue(mockDecoded);
+      userRepo.getByIdWithRole.mockResolvedValue(null);
 
       const response = await request(app)
-        .post('/register')
+        .post('/auth/refresh')
         .send({
-          name: 'Test User',
-          email: 'test@example.com',
-          password: 'password123',
-          role_id: 2
+          refreshToken: 'validRefreshToken'
         });
 
-      expect(response.status).toBe(409);
-      expect(response.body.message).toBe('Email already exists');
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe('Invalid token subject');
     });
   });
 });

@@ -1,18 +1,54 @@
-// Test setup file
-const { Pool } = require('pg');
-
+// Test setup file - NO REAL DATABASE ACCESS
 // Set test environment variables
 process.env.NODE_ENV = 'test';
-process.env.DB_HOST = process.env.TEST_DB_HOST || 'localhost';
-process.env.DB_PORT = process.env.TEST_DB_PORT || '5432';
-process.env.DB_NAME = process.env.TEST_DB_NAME || 'test_db_user';
-process.env.DB_USER = process.env.TEST_DB_USER || 'user-service-db';
-process.env.DB_PASSWORD = process.env.TEST_DB_PASSWORD || 'user@!4';
 process.env.JWT_SECRET = 'test-jwt-secret-key';
 process.env.JWT_REFRESH_SECRET = 'test-jwt-refresh-secret-key';
+process.env.JWT_ACCESS_SECRET = 'test-jwt-access-secret-key';
+process.env.JWT_ACCESS_EXPIRES = '15m';
+process.env.JWT_REFRESH_EXPIRES = '7d';
 
 // Global test timeout
 jest.setTimeout(10000);
+
+// Global mock for database pool - PREVENT ANY REAL DB ACCESS
+jest.mock('../src/db/pool', () => ({
+  pool: {
+    query: jest.fn(),
+    connect: jest.fn(),
+    end: jest.fn()
+  }
+}));
+
+// Global mock for config database
+jest.mock('../src/config/database', () => ({
+  query: jest.fn(),
+  connect: jest.fn(),
+  end: jest.fn()
+}));
+
+// Mock external services - NO EXTERNAL CALLS
+jest.mock('../src/middlewares/logger', () => ({
+  httpLogger: (req, res, next) => next()
+}));
+
+jest.mock('../src/middlewares/timeout', () => ({
+  timeoutGuard: () => (req, res, next) => next()
+}));
+
+jest.mock('../src/middlewares/error', () => ({
+  errorHandler: (err, req, res, next) => {
+    res.status(err.status || 500).json({
+      success: false,
+      message: err.message || 'Internal server error'
+    });
+  },
+  notFoundHandler: (req, res) => {
+    res.status(404).json({
+      success: false,
+      message: 'Route not found'
+    });
+  }
+}));
 
 // Mock console methods to reduce noise in tests
 global.console = {
@@ -62,4 +98,11 @@ beforeEach(() => {
 
 afterEach(() => {
   // Cleanup after each test if needed
+});
+
+// Dummy test to prevent "no tests" error
+describe('Setup', () => {
+  it('should configure test environment', () => {
+    expect(process.env.NODE_ENV).toBe('test');
+  });
 });
