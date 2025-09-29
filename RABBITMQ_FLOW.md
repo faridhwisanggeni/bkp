@@ -53,11 +53,15 @@ Frontend → Order Service → RabbitMQ → Product Service → RabbitMQ → Ord
 - Order status → `completed`
 - Order Service publishes `order.completed` event
 
-#### Step 6: Stock Reduction
+#### Step 6: Stock Reduction (IMPLEMENTED ✅)
 - Product Service consumes `order.completed` event
-- Reduces stock for each product in the order
-- Updates Redis cache with new stock levels
-- Logs stock reduction activities
+- Reduces stock for each product in the order in PostgreSQL database
+- **Updates Redis cache with new stock levels** (Real-time cache sync)
+- Caches both individual stock levels and full product data
+- Logs all stock reduction activities with detailed information
+- **Redis Keys Used:**
+  - `product:{id}:stock` - Individual stock level (TTL: 1 hour)
+  - `product:{id}:data` - Full product data (TTL: 30 minutes)
 
 ## RabbitMQ Configuration
 
@@ -272,6 +276,25 @@ curl -X POST http://localhost:3003/api/orders/{ORDER_ID}/complete-payment \
 - Health check endpoints available on both services
 - RabbitMQ connection status included in health checks
 - Comprehensive logging for debugging
+
+## Redis Integration
+
+### Stock Caching Strategy
+- **Real-time Updates**: Redis cache is updated immediately when stock changes
+- **Dual Storage**: Both individual stock levels and complete product data are cached
+- **TTL Management**: Different expiration times for different data types
+- **Fallback Mechanism**: System continues to work even if Redis is unavailable
+
+### Cache Keys Structure
+```
+product:{productId}:stock     → Stock quantity only (TTL: 1 hour)
+product:{productId}:data      → Complete product object (TTL: 30 minutes)
+```
+
+### Error Handling
+- Redis connection failures are logged but don't stop order processing
+- Database remains the source of truth
+- Cache misses fallback to database queries
 
 ## Benefits
 

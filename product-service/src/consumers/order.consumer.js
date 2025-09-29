@@ -1,5 +1,6 @@
 const rabbitmqService = require('../services/rabbitmq.service')
 const ProductRepository = require('../repositories/product.repository')
+const redisClient = require('../config/redis')
 
 class OrderConsumer {
   constructor() {
@@ -272,13 +273,23 @@ class OrderConsumer {
 
   async updateStockCache(productId, newStock) {
     try {
-      // This would update Redis cache
-      // For now, just log the action
-      console.log(`🔄 Would update Redis cache for product ${productId} with stock: ${newStock}`)
+      // Update Redis cache with new stock level
+      const cacheKey = `product:${productId}:stock`
+      const success = await redisClient.set(cacheKey, newStock, 3600) // 1 hour TTL
       
-      // In real implementation:
-      // await redisClient.set(`product:${productId}:stock`, newStock)
-      // await redisClient.expire(`product:${productId}:stock`, 3600) // 1 hour TTL
+      if (success) {
+        console.log(`✅ Redis cache updated for product ${productId}: stock = ${newStock}`)
+      } else {
+        console.log(`⚠️ Failed to update Redis cache for product ${productId}`)
+      }
+      
+      // Also cache the full product data
+      const product = await this.productRepository.findById(productId)
+      if (product) {
+        const productCacheKey = `product:${productId}:data`
+        await redisClient.set(productCacheKey, product, 1800) // 30 minutes TTL
+        console.log(`✅ Redis product data cached for product ${productId}`)
+      }
       
     } catch (error) {
       console.error('❌ Error updating stock cache:', error)

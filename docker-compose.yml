@@ -62,6 +62,10 @@ services:
       - RABBITMQ_USER=admin
       - RABBITMQ_PASSWORD=admin123
       - RABBITMQ_VHOST=/
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - REDIS_DB=0
     restart: unless-stopped
     networks:
       - app-network
@@ -69,6 +73,8 @@ services:
       db-product:
         condition: service_healthy
       rabbitmq:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
   order-service:

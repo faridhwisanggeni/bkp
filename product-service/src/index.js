@@ -3,6 +3,7 @@ const app = require('./app');
 const { pool } = require('./db/pool');
 const rabbitmqService = require('./services/rabbitmq.service');
 const OrderConsumer = require('./consumers/order.consumer');
+const redisClient = require('./config/redis');
 
 const PORT = process.env.PORT || 3002;
 
@@ -22,6 +23,9 @@ async function testConnection() {
 async function startServer() {
   try {
     await testConnection();
+    
+    // Connect to Redis
+    await redisClient.connect();
     
     // Connect to RabbitMQ
     await rabbitmqService.connect();
