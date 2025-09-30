@@ -134,7 +134,7 @@ function Login() {
           <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             {/* Email Field */}
             <div>
-              <label style={{
+              <label htmlFor="email" style={{
                 display: 'block',
                 fontSize: '0.875rem',
                 fontWeight: '500',
@@ -150,31 +150,10 @@ function Login() {
                   color: '#9ca3af'
                 }} />
                 <input
+                  id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  required
-                  style={{
-                    width: '100%',
-                    paddingLeft: '2.75rem',
-                    paddingRight: '1rem',
-                    paddingTop: '0.75rem',
-                    paddingBottom: '0.75rem',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '0.5rem',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s',
-                    outline: 'none',
-                    boxSizing: 'border-box'
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = '#667eea'
-                    e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)'
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = '#d1d5db'
-                    e.target.style.boxShadow = 'none'
-                  }}
                   placeholder="Enter your email"
                 />
               </div>
@@ -182,7 +161,7 @@ function Login() {
 
             {/* Password Field */}
             <div>
-              <label style={{
+              <label htmlFor="password" style={{
                 display: 'block',
                 fontSize: '0.875rem',
                 fontWeight: '500',
@@ -198,9 +177,11 @@ function Login() {
                   color: '#9ca3af'
                 }} />
                 <input
+                  id="password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
                   required
                   style={{
                     width: '100%',
@@ -228,6 +209,7 @@ function Login() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label="Toggle password visibility"
                   style={{
                     position: 'absolute',
                     right: '0.75rem',

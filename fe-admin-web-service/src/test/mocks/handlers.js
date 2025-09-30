@@ -1,27 +1,52 @@
 import { http, HttpResponse } from 'msw'
 
-const API_BASE_URL = 'http://localhost:3000'
+const API_BASE_URL = 'http://localhost:8080'
 
 export const handlers = [
   // Auth endpoints
   http.post(`${API_BASE_URL}/api/auth/login`, async ({ request }) => {
-    const { username, password } = await request.json()
+    const { email, password } = await request.json()
     
-    if (username === 'admin' && password === 'password') {
+    if (email === 'admin@example.com' && password === 'ChangeMeAdmin123!') {
       return HttpResponse.json({
         success: true,
-        token: 'mock-jwt-token',
-        user: {
-          id: 1,
-          username: 'admin',
-          email: 'admin@example.com',
-          role: 'admin'
+        data: {
+          accessToken: 'mock-jwt-token',
+          refreshToken: 'mock-refresh-token'
+        }
+      })
+    }
+    
+    if (email === 'malformed@example.com') {
+      return HttpResponse.json({
+        success: true,
+        data: {
+          accessToken: 'malformed-jwt',
+          refreshToken: 'malformed-refresh'
         }
       })
     }
     
     return HttpResponse.json(
       { success: false, message: 'Invalid credentials' },
+      { status: 401 }
+    )
+  }),
+
+  http.post(`${API_BASE_URL}/api/auth/refresh`, async ({ request }) => {
+    const { refreshToken } = await request.json()
+    
+    if (refreshToken === 'mock-refresh-token') {
+      return HttpResponse.json({
+        success: true,
+        data: {
+          accessToken: 'new-mock-jwt-token'
+        }
+      })
+    }
+    
+    return HttpResponse.json(
+      { success: false, message: 'Invalid refresh token' },
       { status: 401 }
     )
   }),
