@@ -1,49 +1,49 @@
 # BKP Commerce - Order Management System
 
-Sistem ini terkait order management sistem yang dibuat secara sederhana dengan arsitektur microservices menggunakan API Gateway sebagai single entry point.
+A comprehensive order management system built with microservices architecture using API Gateway as a single entry point for seamless service orchestration.
 
-## 🚨 Keterbatasan Sistem
+## 🚨 System Limitations
 
-Beberapa fitur memiliki kekurangan sesuai dengan scope yang ada, seperti:
-1. **Fitur pembayaran** menggunakan kartu kredit yang dipastikan akan selalu berhasil, demi kelancaran dari pengujian transaksi.
-2. **Fitur delivery atau pengiriman** tidak tersedia saat ini.
-3. **Fitur RBAC** saat ini tidak diimplementasikan secara penuh.
+Some features have limitations according to the current scope:
+1. **Payment processing** uses mock credit card functionality that always succeeds for testing purposes.
+2. **Delivery/shipping features** are not currently available.
+3. **RBAC (Role-Based Access Control)** is not fully implemented at this time.
 
-## 🎯 Fitur Yang Tersedia
+## 🎯 Available Features
 
-### 👨‍💼 Fitur Admin
-1. Admin dapat melakukan maintenance terhadap data user
-2. Admin dapat melakukan maintenance terhadap data role
+### 👨‍💼 Admin Features
+1. User data management and maintenance
+2. Role data management and maintenance
 
-### 👨‍💻 Fitur Sales Team 
-1. Sales dapat melakukan maintenance terhadap data product
-2. Sales dapat melakukan maintenance terhadap data promotion
-3. Sales dapat melakukan maintenance terhadap data order
+### 👨‍💻 Sales Team Features 
+1. Product data management and maintenance
+2. Promotion data management and maintenance
+3. Order data management and maintenance
 
-### 👤 Fitur Customer
-1. Customer dapat melihat produk dan promotion yang ada pada page utama
-2. Customer dapat melakukan checkout pada page utama
-3. Customer dapat melakukan pembayaran secara fake sehingga transaksi akan selalu berhasil dan status order completed
+### 👤 Customer Features
+1. Browse products and promotions on the main page
+2. Perform checkout on the main page
+3. Complete mock payment processing (always successful with completed order status)
 
-## 🛠️ Teknologi Stack
+## 🛠️ Technology Stack
 
-1. **Frontend**: ReactJS
-2. **Backend**: NodeJS (Express)
-3. **Database**: PostgreSQL
-4. **Message Queue**: RabbitMQ
-5. **In-memory Database**: Redis
-6. **Container**: Docker & Docker Compose
-7. **API Gateway**: Custom Express Gateway
+1. **Frontend**: ReactJS with modern UI components
+2. **Backend**: Node.js (Express) microservices
+3. **Database**: PostgreSQL for persistent data storage
+4. **Message Queue**: RabbitMQ for asynchronous communication
+5. **In-memory Database**: Redis for caching and sessions
+6. **Containerization**: Docker & Docker Compose
+7. **API Gateway**: Custom Express-based gateway
 
-## 🏗️ Arsitektur Sistem
+## 🏗️ System Architecture
 
-### Konsep General
-1. **Frontend-First**: Semua kegiatan akan dilakukan menggunakan frontend
-2. **API Gateway Pattern**: Frontend berkomunikasi dengan gateway sebagai single entry point
-3. **Microservices**: Gateway meneruskan request ke microservice yang sesuai
-4. **Asynchronous Communication**: Order-service dan product-service berkomunikasi via RabbitMQ dan Redis
+### General Concepts
+1. **Frontend-First**: All operations are performed through the frontend interface
+2. **API Gateway Pattern**: Frontend communicates with gateway as single entry point
+3. **Microservices**: Gateway routes requests to appropriate microservices
+4. **Asynchronous Communication**: Order-service and product-service communicate via RabbitMQ and Redis
 
-### Konsep Spesifik
+### Specific Architecture
 
 ```
 ┌─────────────┐    ┌─────────────┐    ┌─────────────────┐
@@ -79,21 +79,30 @@ Beberapa fitur memiliki kekurangan sesuai dengan scope yang ada, seperti:
 ## 📦 Services Overview
 
 ### API Gateway (Port 8080)
-- **Single Entry Point** untuk semua API calls
+- **Single Entry Point** for all API calls
 - **JWT Authentication & Authorization**
 - **Rate Limiting** (1000 req/15min per IP)
-- **Request Proxying** ke backend services
-- **Health Monitoring** semua services
+- **Request Proxying** to backend services
+- **Health Monitoring** for all services
 
 ### User Service (Port 3000)
 - **Authentication** (login/refresh token)
 - **User Management** (CRUD operations)
 - **Role Management** (CRUD operations)
 
+### Product Service (Port 3002)
+- **Product Catalog** management
+- **Promotion Management** 
+- **Stock Validation** via RabbitMQ
+- **Daily Order Limits** enforcement
+
+### Order Service (Port 3003)
+- **Order Processing** with RabbitMQ integration
+- **Payment Processing** (mock implementation)
+- **Order Status Management** (pending/processed/cancelled/failed)
+
 ### Order Processing Flow
-1. Order Created → RabbitMQ → Order Service (Validation Response)
-2. Order Service → RabbitMQ → Product Service (Stock Validation)
-3. Product Service → RabbitMQ → Order Service (Validation Response)
+```
 1. Order Created → RabbitMQ → Product Service (Stock Validation)
 2. Product Service → RabbitMQ → Order Service (Validation Response)
 3. Order Service → Payment Processing → Stock Reduction
@@ -110,7 +119,7 @@ Beberapa fitur memiliki kekurangan sesuai dengan scope yang ada, seperti:
 ### Prerequisites
 - Docker & Docker Compose
 - Git
-- Make (optional, untuk convenience commands)
+- Make (optional, for convenience commands)
 
 ### Quick Start
 
@@ -130,18 +139,18 @@ make up
 
 ## 📋 Make Commands
 
-### ⚠️ PERHATIAN PENTING
-**Mohon diperhatikan point-point dibawah ini, karena akan berpotensi menghilangkan data yang sudah anda buat jika anda salah dalam menggunakan command.**
+### ⚠️ IMPORTANT NOTICE
+**Please pay attention to the following points, as incorrect usage of commands may result in data loss.**
 
 ### Basic Commands
 ```bash
 # First time setup
-make up                 # Build dan start semua services
+make up                 # Build and start all services
 
 # Service management
 make restart           # Restart services only (keep databases)
 make restart-full      # Restart everything including databases
-make down             # Stop dan remove ALL containers & images
+make down             # Stop and remove ALL containers & images
 
 # Monitoring
 make status           # Check service status
@@ -158,9 +167,10 @@ make test-coverage    # Tests with coverage
 make test-integration # Integration tests
 
 # Service-specific tests
-make test-user        # Test user-service
-make test-product     # Test product-service  
-make test-order       # Test order-service
+make test-gateway     # Test API Gateway
+make test-user        # Test User Service
+make test-product     # Test Product Service  
+make test-order       # Test Order Service
 
 # Frontend Testing
 make test-frontend           # All frontend tests
