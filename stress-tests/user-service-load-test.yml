@@ -1,0 +1,156 @@
+config:
+  target: 'http://localhost:3000'  # User Service
+  phases:
+    # Warm-up phase
+    - duration: 30
+      arrivalRate: 10
+      name: "Warm-up"
+    # Ramp-up phase
+    - duration: 60
+      arrivalRate: 20
+      rampTo: 50
+      name: "Ramp-up"
+    # Sustained load phase
+    - duration: 120
+      arrivalRate: 50
+      name: "Sustained load"
+    # Peak load phase
+    - duration: 60
+      arrivalRate: 100
+      name: "Peak load"
+    # Cool-down phase
+    - duration: 30
+      arrivalRate: 10
+      name: "Cool-down"
+  
+  # Global configuration
+  timeout: 30
+  
+  # Variables for test data
+  variables:
+    testEmails:
+      - "admin@example.com"
+      - "sales@example.com"
+      - "customer@example.com"
+    testPasswords:
+      - "ChangeMeAdmin123!"
+      - "ChangeMeSales123!"
+      - "ChangeMeCustomer123!"
+  
+  # Plugins for enhanced reporting
+  plugins:
+    metrics-by-endpoint:
+      useOnlyRequestNames: true
+    
+  # Performance thresholds
+  ensure:
+    thresholds:
+      - http.response_time.p95: 800   # 95% of requests should complete within 800ms
+      - http.response_time.p99: 1500  # 99% of requests should complete within 1.5s
+      - http.response_time.median: 300  # 50% of requests should complete within 300ms
+      - http.codes.200: 95  # 95% success rate
+      - http.codes.401: 5   # Allow some auth failures
+
+scenarios:
+  # Authentication stress test
+  - name: "Authentication Load Test"
+    weight: 40
+    flow:
+      - post:
+          url: "/auth/login"
+          name: "User Login"
+          json:
+            email: "{{ $randomPick(testEmails) }}"
+            password: "{{ $randomPick(testPasswords) }}"
+          capture:
+            - json: "$.accessToken"
+              as: "accessToken"
+      - think: 1
+      
+      # Test token refresh
+      - post:
+          url: "/auth/refresh"
+          name: "Token Refresh"
+          json:
+            refreshToken: "{{ accessToken }}"
+      - think: 2
+
+  # User CRUD operations stress test
+  - name: "User CRUD Load Test"
+    weight: 40
+    flow:
+      # Login first
+      - post:
+          url: "/auth/login"
+          name: "Login for CRUD"
+          json:
+            email: "admin@example.com"
+            password: "ChangeMeAdmin123!"
+          capture:
+            - json: "$.accessToken"
+              as: "accessToken"
+      - think: 1
+      
+      # Get users
+      - get:
+          url: "/api/users"
+          name: "Get All Users"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+      - think: 0.5
+      
+      # Create user
+      - post:
+          url: "/api/users"
+          name: "Create User"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          json:
+            username: "testuser{{ $randomInt(1, 10000) }}"
+            email: "test{{ $randomInt(1, 10000) }}@example.com"
+            password: "TestPassword123!"
+            role: "customer"
+      - think: 1
+      
+      # Get user by ID
+      - get:
+          url: "/api/users/1"
+          name: "Get User by ID"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+      - think: 0.5
+
+  # Role management stress test
+  - name: "Role Management Load Test"
+    weight: 20
+    flow:
+      # Login as admin
+      - post:
+          url: "/auth/login"
+          name: "Admin Login for Roles"
+          json:
+            email: "admin@example.com"
+            password: "ChangeMeAdmin123!"
+          capture:
+            - json: "$.accessToken"
+              as: "accessToken"
+      - think: 1
+      
+      # Get roles
+      - get:
+          url: "/api/roles"
+          name: "Get All Roles"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+      - think: 0.5
+      
+      # Create role
+      - post:
+          url: "/api/roles"
+          name: "Create Role"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          json:
+            name: "testrole{{ $randomInt(1, 1000) }}"
+            permissions: ["read", "write"]
+      - think: 1

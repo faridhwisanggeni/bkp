@@ -1,0 +1,184 @@
+config:
+  target: 'http://localhost:3003'  # Order Service
+  phases:
+    # Warm-up phase
+    - duration: 30
+      arrivalRate: 10
+      name: "Warm-up"
+    # Ramp-up phase
+    - duration: 60
+      arrivalRate: 20
+      rampTo: 40
+      name: "Ramp-up"
+    # Sustained load phase
+    - duration: 120
+      arrivalRate: 40
+      name: "Sustained load"
+    # Peak load phase
+    - duration: 60
+      arrivalRate: 80
+      name: "Peak load"
+    # Cool-down phase
+    - duration: 30
+      arrivalRate: 10
+      name: "Cool-down"
+  
+  # Global configuration
+  timeout: 30
+  
+  # Variables for test data
+  variables:
+    usernames:
+      - "testuser1@example.com"
+      - "testuser2@example.com"
+      - "testuser3@example.com"
+      - "loadtest@example.com"
+    productIds: [1, 2, 3, 4, 5]
+  
+  # Plugins for enhanced reporting
+  plugins:
+    metrics-by-endpoint:
+      useOnlyRequestNames: true
+    
+  # Performance thresholds
+  ensure:
+    thresholds:
+      - http.response_time.p95: 1500  # 95% of requests should complete within 1.5s
+      - http.response_time.p99: 3000  # 99% of requests should complete within 3s (order processing)
+      - http.response_time.median: 500  # 50% of requests should complete within 500ms
+      - http.codes.200: 90  # 90% success rate (some orders may fail due to stock)
+      - http.codes.201: 5   # Order creation success
+
+scenarios:
+  # Order creation stress test (RabbitMQ intensive)
+  - name: "Order Creation Load Test"
+    weight: 40
+    flow:
+      # Create order
+      - post:
+          url: "/api/orders"
+          name: "Create Order"
+          headers:
+            Authorization: "Bearer mock-token"
+          json:
+            username: "{{ $randomPick(usernames) }}"
+            total_harga: "{{ $randomInt(100, 1000) }}.99"
+            items:
+              - id_product: "{{ $randomPick(productIds) }}"
+                qty: "{{ $randomInt(1, 5) }}"
+                original_price: "{{ $randomInt(50, 500) }}.99"
+                id_promo: null
+                deduct_price: 0
+                total_price: "{{ $randomInt(50, 500) }}.99"
+          capture:
+            - json: "$.data.order_id"
+              as: "orderId"
+      - think: 2  # Wait for RabbitMQ processing
+      
+      # Check order status
+      - get:
+          url: "/api/orders/{{ orderId }}"
+          name: "Check Order Status"
+          headers:
+            Authorization: "Bearer mock-token"
+      - think: 1
+
+  # Order retrieval stress test
+  - name: "Order Retrieval Load Test"
+    weight: 30
+    flow:
+      # Get all orders
+      - get:
+          url: "/api/orders"
+          name: "Get All Orders"
+          headers:
+            Authorization: "Bearer mock-token"
+      - think: 0.5
+      
+      # Get orders by user
+      - get:
+          url: "/api/orders/user/{{ $randomPick(usernames) }}"
+          name: "Get Orders by User"
+          headers:
+            Authorization: "Bearer mock-token"
+      - think: 0.5
+      
+      # Get specific order
+      - get:
+          url: "/api/orders/{{ $randomString() }}"
+          name: "Get Order by ID"
+          headers:
+            Authorization: "Bearer mock-token"
+      - think: 0.5
+
+  # Order status update stress test
+  - name: "Order Status Update Load Test"
+    weight: 20
+    flow:
+      # Create order first
+      - post:
+          url: "/api/orders"
+          name: "Create Order for Update"
+          headers:
+            Authorization: "Bearer mock-token"
+          json:
+            username: "{{ $randomPick(usernames) }}"
+            total_harga: "99.99"
+            items:
+              - id_product: "{{ $randomPick(productIds) }}"
+                qty: 1
+                original_price: "99.99"
+                id_promo: null
+                deduct_price: 0
+                total_price: "99.99"
+          capture:
+            - json: "$.data.order_id"
+              as: "orderId"
+      - think: 1
+      
+      # Update order status
+      - put:
+          url: "/api/orders/{{ orderId }}/status"
+          name: "Update Order Status"
+          headers:
+            Authorization: "Bearer mock-token"
+          json:
+            status: "completed"
+      - think: 1
+
+  # Payment processing stress test
+  - name: "Payment Processing Load Test"
+    weight: 10
+    flow:
+      # Create order
+      - post:
+          url: "/api/orders"
+          name: "Create Order for Payment"
+          headers:
+            Authorization: "Bearer mock-token"
+          json:
+            username: "{{ $randomPick(usernames) }}"
+            total_harga: "199.99"
+            items:
+              - id_product: "{{ $randomPick(productIds) }}"
+                qty: 2
+                original_price: "99.99"
+                id_promo: null
+                deduct_price: 0
+                total_price: "199.99"
+          capture:
+            - json: "$.data.order_id"
+              as: "orderId"
+      - think: 2
+      
+      # Process payment
+      - post:
+          url: "/api/orders/{{ orderId }}/payment"
+          name: "Process Payment"
+          headers:
+            Authorization: "Bearer mock-token"
+          json:
+            payment_method: "credit_card"
+            card_number: "4111111111111111"
+            amount: "199.99"
+      - think: 3  # Payment processing time

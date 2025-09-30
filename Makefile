@@ -1,4 +1,4 @@
-.PHONY: up down restart logs status clean test test-coverage test-unit test-integration test-user test-product test-order test-user-coverage test-product-coverage test-order-coverage test-frontend test-frontend-unit test-frontend-coverage test-frontend-e2e test-frontend-stress test-frontend-lint test-all setup-permissions help
+.PHONY: up down restart logs status clean test test-coverage test-unit test-integration test-user test-product test-order test-user-coverage test-product-coverage test-order-coverage test-frontend test-frontend-unit test-frontend-coverage test-frontend-e2e test-frontend-stress test-frontend-lint test-backend-stress test-stress-api-gateway test-stress-user-service test-stress-product-service test-stress-order-service test-stress-rabbitmq test-all setup-permissions help
 
 # Default target
 help:
@@ -12,16 +12,16 @@ help:
 	@echo "  make status  - Show status of all containers"
 	@echo "  make clean   - Deep clean (remove everything)"
 	@echo ""
-	@echo "🧪 Backend Testing Commands:"
 	@echo ""
 	@echo "  make test           - Run all backend tests (unit + integration)"
 	@echo "  make test-unit      - Run backend unit tests only"
 	@echo "  make test-coverage  - Run backend tests with coverage report"
 	@echo "  make test-integration - Run backend integration tests only"
-	@echo ""
-	@echo "  make test-user      - Test user-service only"
-	@echo "  make test-product   - Test product-service only"
-	@echo "  make test-order     - Test order-service only"
+	@echo "# Service-specific tests"
+	@echo "  make test-gateway     - Test api-gateway"
+	@echo "  make test-user        - Test user-service"
+	@echo "  make test-product     - Test product-service"
+	@echo "  make test-order       - Test order-service only"
 	@echo ""
 	@echo "  make test-user-coverage    - User service with coverage"
 	@echo "  make test-product-coverage - Product service with coverage"
@@ -30,21 +30,26 @@ help:
 	@echo "🎨 Frontend Testing Commands:"
 	@echo ""
 	@echo "  make test-frontend         - Run all frontend tests"
-	@echo "  make test-frontend-unit    - Run frontend unit tests"
 	@echo "  make test-frontend-coverage - Run frontend tests with coverage"
 	@echo "  make test-frontend-e2e     - Run frontend E2E tests"
 	@echo "  make test-frontend-stress  - Run frontend stress tests"
 	@echo "  make test-frontend-lint    - Run frontend code quality checks"
 	@echo ""
-	@echo "🚀 Combined Testing Commands:"
+	@echo "⚡ Backend Stress Testing Commands:"
+	@echo "  make test-backend-stress       - Run all backend stress tests"
+	@echo "  make test-stress-api-gateway   - Run API Gateway stress test"
+	@echo "  make test-stress-user-service  - Run User Service stress test"
+	@echo "  make test-stress-product-service - Run Product Service stress test"
+	@echo "  make test-stress-order-service - Run Order Service stress test"
+	@echo "  make test-stress-rabbitmq      - Run RabbitMQ message queue stress test"
 	@echo ""
-	@echo "  make test-all       - Run ALL tests (backend + frontend)"
+	@echo "🚀 Combined Testing Commands:"
+	@echo "  make test-all          - Run all tests (backend + frontend)"
 	@echo ""
 	@echo "🔧 Utility Commands:"
 	@echo ""
 	@echo "  make setup-permissions - Set execute permissions for all .sh files"
 	@echo ""
-	@echo "  make help    - Show this help message"
 	@echo ""
 
 # Start services with cleanup
@@ -99,6 +104,43 @@ test-unit:
 	@./run-tests.sh unit all
 	@echo "✅ Unit tests completed!"
 
+# Backend Stress Testing Commands
+test-backend-stress:
+	@echo "⚡ Running all backend stress tests..."
+	@chmod +x run-stress-tests.sh
+	@./run-stress-tests.sh all
+	@echo "✅ All backend stress tests completed!"
+
+test-stress-api-gateway:
+	@echo "🌐 Running API Gateway stress test..."
+	@chmod +x run-stress-tests.sh
+	@./run-stress-tests.sh api-gateway
+	@echo "✅ API Gateway stress test completed!"
+
+test-stress-user-service:
+	@echo "👤 Running User Service stress test..."
+	@chmod +x run-stress-tests.sh
+	@./run-stress-tests.sh user-service
+	@echo "✅ User Service stress test completed!"
+
+test-stress-product-service:
+	@echo "📦 Running Product Service stress test..."
+	@chmod +x run-stress-tests.sh
+	@./run-stress-tests.sh product-service
+	@echo "✅ Product Service stress test completed!"
+
+test-stress-order-service:
+	@echo "🛒 Running Order Service stress test..."
+	@chmod +x run-stress-tests.sh
+	@./run-stress-tests.sh order-service
+	@echo "✅ Order Service stress test completed!"
+
+test-stress-rabbitmq:
+	@echo "🐰 Running RabbitMQ message queue stress test..."
+	@chmod +x run-stress-tests.sh
+	@./run-stress-tests.sh rabbitmq
+	@echo "✅ RabbitMQ stress test completed!"
+
 test-coverage:
 	@echo "📊 Running tests with coverage report..."
 	@chmod +x run-tests.sh
@@ -116,16 +158,20 @@ test-user:
 	@echo "🧪 Testing user-service..."
 	@chmod +x run-tests.sh
 	@./run-tests.sh unit user-service
-
 test-product:
 	@echo "🧪 Testing product-service..."
 	@chmod +x run-tests.sh
 	@./run-tests.sh unit product-service
 
+test-gateway:
+	@echo "🌐 Testing api-gateway..."
+	@cd api-gateway && npm test
+	@echo "✅ API Gateway tests completed!"
+
 test-order:
-	@echo "🧪 Testing order-service..."
-	@chmod +x run-tests.sh
-	@./run-tests.sh unit order-service
+	@echo "🛒 Testing order-service..."
+	@cd order-service && npm test
+	@echo "✅ Order service tests completed!"
 
 # Coverage for specific services
 test-user-coverage:

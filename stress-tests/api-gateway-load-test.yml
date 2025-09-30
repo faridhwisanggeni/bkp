@@ -1,0 +1,117 @@
+config:
+  target: 'http://localhost:8080'  # API Gateway
+  phases:
+    # Warm-up phase
+    - duration: 30
+      arrivalRate: 5
+      name: "Warm-up"
+    # Ramp-up phase
+    - duration: 60
+      arrivalRate: 10
+      rampTo: 30
+      name: "Ramp-up"
+    # Sustained load phase
+    - duration: 120
+      arrivalRate: 30
+      name: "Sustained load"
+    # Peak load phase
+    - duration: 60
+      arrivalRate: 50
+      name: "Peak load"
+    # Cool-down phase
+    - duration: 30
+      arrivalRate: 5
+      name: "Cool-down"
+  
+  # Global configuration
+  timeout: 30
+  
+  # Variables for test data
+  variables:
+    testEmails:
+      - "admin@example.com"
+      - "sales@example.com"
+      - "customer@example.com"
+    testPasswords:
+      - "ChangeMeAdmin123!"
+      - "ChangeMeSales123!"
+      - "ChangeMeCustomer123!"
+  
+  # Plugins for enhanced reporting
+  plugins:
+    metrics-by-endpoint:
+      useOnlyRequestNames: true
+    
+  # Performance thresholds
+  ensure:
+    thresholds:
+      - http.response_time.p95: 1000  # 95% of requests should complete within 1s
+      - http.response_time.p99: 2000  # 99% of requests should complete within 2s
+      - http.response_time.median: 500  # 50% of requests should complete within 500ms
+      - http.codes.200: 95  # 95% success rate
+      - http.codes.401: 5   # Allow some auth failures
+
+scenarios:
+  # Authentication stress test
+  - name: "Authentication Load Test"
+    weight: 30
+    flow:
+      - post:
+          url: "/api/auth/login"
+          name: "Login"
+          json:
+            email: "{{ $randomPick(testEmails) }}"
+            password: "{{ $randomPick(testPasswords) }}"
+          capture:
+            - json: "$.data.accessToken"
+              as: "accessToken"
+      - think: 1
+      
+  # Health check stress test
+  - name: "Health Check Load Test"
+    weight: 20
+    flow:
+      - get:
+          url: "/health"
+          name: "Health Check"
+      - think: 0.5
+
+  # Protected endpoints stress test
+  - name: "Protected Endpoints Load Test"
+    weight: 50
+    flow:
+      # Login first
+      - post:
+          url: "/api/auth/login"
+          name: "Login for Protected Access"
+          json:
+            email: "admin@example.com"
+            password: "ChangeMeAdmin123!"
+          capture:
+            - json: "$.data.accessToken"
+              as: "accessToken"
+      - think: 1
+      
+      # Test user endpoints
+      - get:
+          url: "/api/users"
+          name: "Get Users"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+      - think: 0.5
+      
+      # Test product endpoints
+      - get:
+          url: "/api/products"
+          name: "Get Products"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+      - think: 0.5
+      
+      # Test order endpoints
+      - get:
+          url: "/api/orders"
+          name: "Get Orders"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+      - think: 1

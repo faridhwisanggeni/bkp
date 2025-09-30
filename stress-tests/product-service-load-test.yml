@@ -1,0 +1,154 @@
+config:
+  target: 'http://localhost:3002'  # Product Service
+  phases:
+    # Warm-up phase
+    - duration: 30
+      arrivalRate: 15
+      name: "Warm-up"
+    # Ramp-up phase
+    - duration: 60
+      arrivalRate: 25
+      rampTo: 60
+      name: "Ramp-up"
+    # Sustained load phase
+    - duration: 120
+      arrivalRate: 60
+      name: "Sustained load"
+    # Peak load phase
+    - duration: 60
+      arrivalRate: 120
+      name: "Peak load"
+    # Cool-down phase
+    - duration: 30
+      arrivalRate: 15
+      name: "Cool-down"
+  
+  # Global configuration
+  timeout: 30
+  
+  # Variables for test data
+  variables:
+    productNames:
+      - "Test Product"
+      - "Sample Item"
+      - "Demo Product"
+      - "Load Test Item"
+    productCategories:
+      - "Electronics"
+      - "Clothing"
+      - "Books"
+      - "Home"
+  
+  # Plugins for enhanced reporting
+  plugins:
+    metrics-by-endpoint:
+      useOnlyRequestNames: true
+    
+  # Performance thresholds
+  ensure:
+    thresholds:
+      - http.response_time.p95: 1000  # 95% of requests should complete within 1s
+      - http.response_time.p99: 2000  # 99% of requests should complete within 2s
+      - http.response_time.median: 400  # 50% of requests should complete within 400ms
+      - http.codes.200: 95  # 95% success rate
+
+scenarios:
+  # Product CRUD operations stress test
+  - name: "Product CRUD Load Test"
+    weight: 50
+    flow:
+      # Get all products
+      - get:
+          url: "/api/products"
+          name: "Get All Products"
+      - think: 0.5
+      
+      # Get product by ID
+      - get:
+          url: "/api/products/{{ $randomInt(1, 10) }}"
+          name: "Get Product by ID"
+      - think: 0.5
+      
+      # Create product (requires auth token)
+      - post:
+          url: "/api/products"
+          name: "Create Product"
+          headers:
+            Authorization: "Bearer mock-token"
+          json:
+            name: "{{ $randomPick(productNames) }} {{ $randomInt(1, 1000) }}"
+            description: "Load test product description"
+            price: "{{ $randomInt(10, 1000) }}.99"
+            stock: "{{ $randomInt(1, 100) }}"
+            category: "{{ $randomPick(productCategories) }}"
+      - think: 1
+      
+      # Update product
+      - put:
+          url: "/api/products/{{ $randomInt(1, 10) }}"
+          name: "Update Product"
+          headers:
+            Authorization: "Bearer mock-token"
+          json:
+            name: "Updated {{ $randomPick(productNames) }}"
+            price: "{{ $randomInt(10, 1000) }}.99"
+            stock: "{{ $randomInt(1, 100) }}"
+      - think: 1
+
+  # Promotion CRUD operations stress test
+  - name: "Promotion CRUD Load Test"
+    weight: 30
+    flow:
+      # Get all promotions
+      - get:
+          url: "/api/promotions"
+          name: "Get All Promotions"
+      - think: 0.5
+      
+      # Get promotion by ID
+      - get:
+          url: "/api/promotions/{{ $randomInt(1, 5) }}"
+          name: "Get Promotion by ID"
+      - think: 0.5
+      
+      # Create promotion
+      - post:
+          url: "/api/promotions"
+          name: "Create Promotion"
+          headers:
+            Authorization: "Bearer mock-token"
+          json:
+            name: "Load Test Promo {{ $randomInt(1, 1000) }}"
+            description: "Stress test promotion"
+            type: "discount"
+            discount: "{{ $randomInt(5, 50) }}"
+            start_date: "2024-01-01"
+            end_date: "2024-12-31"
+            is_active: true
+      - think: 1
+
+  # Stock validation stress test (RabbitMQ integration)
+  - name: "Stock Validation Load Test"
+    weight: 20
+    flow:
+      # Simulate stock check requests
+      - get:
+          url: "/api/products/{{ $randomInt(1, 10) }}/stock"
+          name: "Check Product Stock"
+      - think: 0.3
+      
+      # Simulate multiple stock checks
+      - get:
+          url: "/api/products/{{ $randomInt(1, 10) }}/stock"
+          name: "Check Stock Again"
+      - think: 0.3
+      
+      # Test stock update
+      - put:
+          url: "/api/products/{{ $randomInt(1, 10) }}/stock"
+          name: "Update Stock"
+          headers:
+            Authorization: "Bearer mock-token"
+          json:
+            stock: "{{ $randomInt(1, 100) }}"
+      - think: 1

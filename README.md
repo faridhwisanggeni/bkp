@@ -89,32 +89,11 @@ Beberapa fitur memiliki kekurangan sesuai dengan scope yang ada, seperti:
 - **Authentication** (login/refresh token)
 - **User Management** (CRUD operations)
 - **Role Management** (CRUD operations)
-- **Database**: PostgreSQL (db-user)
-
-### Product Service (Port 3002)
-- **Product Management** (CRUD operations)
-- **Promotion Management** (CRUD operations)
-- **Stock Validation** via RabbitMQ
-- **Daily Order Limits** validation
-- **Database**: PostgreSQL (db-product)
-- **Cache**: Redis
-
-### Order Service (Port 3003)
-- **Order Management** (CRUD operations)
-- **Order Processing** via RabbitMQ
-- **Payment Processing** (fake implementation)
-- **Order Status Management**
-- **Database**: PostgreSQL (db-order)
-
-### Message Queue & Cache
-- **RabbitMQ**: Async communication between services
-- **Redis**: Caching and session management
-- **PostgreSQL**: Primary data storage (3 databases)
-
-## 🔄 Message Flow (RabbitMQ)
 
 ### Order Processing Flow
-```
+1. Order Created → RabbitMQ → Order Service (Validation Response)
+2. Order Service → RabbitMQ → Product Service (Stock Validation)
+3. Product Service → RabbitMQ → Order Service (Validation Response)
 1. Order Created → RabbitMQ → Product Service (Stock Validation)
 2. Product Service → RabbitMQ → Order Service (Validation Response)
 3. Order Service → Payment Processing → Stock Reduction
@@ -191,6 +170,14 @@ make test-frontend-e2e       # End-to-end tests
 make test-frontend-stress    # Load/stress tests
 make test-frontend-lint      # Code quality checks
 
+# Backend Stress Testing
+make test-backend-stress       # All backend stress tests
+make test-stress-api-gateway   # API Gateway stress test
+make test-stress-user-service  # User Service stress test
+make test-stress-product-service # Product Service stress test
+make test-stress-order-service # Order Service stress test
+make test-stress-rabbitmq      # RabbitMQ message queue stress test
+
 # Combined Testing
 make test-all         # Backend + Frontend tests
 ```
@@ -246,6 +233,53 @@ Role: customer
 - **Stress**: Artillery load testing
 - **Mocking**: MSW (Mock Service Worker)
 - **Coverage**: 70%+ threshold
+
+### Backend Stress Testing
+- **Framework**: Artillery.io for load testing
+- **Services Covered**: API Gateway, User Service, Product Service, Order Service, RabbitMQ
+- **Test Phases**: Warm-up → Ramp-up → Sustained → Peak → Cool-down
+- **Performance Thresholds**: P95 < 1-3s, Success rate > 85-95%
+- **Reports**: Automated HTML report generation
+
+#### Stress Test Configurations
+
+| Service | Peak Load | P95 Target | Success Rate | Special Features |
+|---------|-----------|------------|--------------|------------------|
+| API Gateway | 50 req/s | < 1000ms | > 95% | Authentication, Protected endpoints |
+| User Service | 100 req/s | < 800ms | > 95% | CRUD operations, Role management |
+| Product Service | 120 req/s | < 1000ms | > 95% | Stock validation, Promotions |
+| Order Service | 80 req/s | < 1500ms | > 90% | RabbitMQ integration, Payment processing |
+| RabbitMQ | 50 req/s | < 3000ms | > 85% | Message flood, Stock validation, Daily limits |
+
+#### Running Stress Tests
+
+```bash
+# Prerequisites: All services must be running
+make up
+
+# Run all backend stress tests
+make test-backend-stress
+
+# Run individual service stress tests
+make test-stress-api-gateway
+make test-stress-user-service
+make test-stress-product-service
+make test-stress-order-service
+make test-stress-rabbitmq
+
+# Direct script usage
+./run-stress-tests.sh all
+./run-stress-tests.sh api-gateway
+```
+
+#### Stress Test Reports
+
+After running stress tests, HTML reports are automatically generated:
+- `api-gateway-report.html`
+- `user-service-report.html`
+- `product-service-report.html`
+- `order-service-report.html`
+- `rabbitmq-report.html`
 
 ### API Testing
 - **Tools**: cURL, Postman collections
